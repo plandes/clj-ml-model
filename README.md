@@ -271,16 +271,16 @@ mentioned in the [previous section](#persist-model):
 (exc/dump-model-info (model))
 ```
 which yields:
-```assembly
+```make
 instances-total: 382.0
 instances-correct: 366.0
 instances-incorrct: 16.0
 name: speech-act
-create-time: Fri Jul 22 15:50:36 CDT 2016
+create-time: Mon Jul 25 12:19:24 CDT 2016
 accuracy: 95.81151832460733
-wprecision: 0.9586211942644981
+wprecision: 0.9585456987726836
 wrecall: 0.9581151832460733
-wfmeasure: 0.9580049621992995
+wfmeasure: 0.9580599320074707
 features:
 (:token-count :pos-tag-ratio-noun :pos-tag-ratio-wh :pos-first-tag :pos-last-tag :stopword-count)
 classifier: ...
@@ -331,6 +331,100 @@ Now we can create a client friendly (to our new library) function:
        (exc/classify (model) anon)
        :label))
 ```
+
+### Test the Model
+
+In our [example](#use-the-model) we performed with a weighted F-measure
+of 0.96, which seems pretty unbelievable.  Another way to confirm we have a
+good model is to divide the dataset into a training and test set.  For this
+example, let's split it right down the middle and retrain:
+```clojure
+user=> (adb/divide-by-set 0.5)
+user=> (reset! instance-inst nil) ; invalidate the instances cache
+user=> (with-model-conf (create-model-config)
+		 (->> (ec/create-model classifiers :set-best)
+			  ec/train-model
+			  ec/write-model))
+user=> (reset! model-inst nil) ; invalidate the model
+user=> (exc/print-model-info)
+```
+yeilds:
+```make
+instances-total: 239.0
+instances-correct: 225.0
+instances-incorrct: 14.0
+name: speech-act
+create-time: Mon Jul 25 12:51:18 CDT 2016
+accuracy: 94.14225941422595
+wprecision: 0.9413853837630445
+wrecall: 0.9414225941422594
+wfmeasure: 0.9413703416300443
+```
+which is still very good and still hard to believe how well it performs.
+However, now we have a better way to prove the model, which is to run it on
+data we left out, which is the training data.  We'll code to invoke the model
+classifier on the test data:
+```clojure
+(ns zensols.example.sa-model
+  (:require [clj-excel.core :as excel])
+  (:require [zensols.actioncli.dynamic :refer (dyn-init-var) :as dyn]
+            [zensols.actioncli.log4j2 :as lu]
+            [zensols.actioncli.resource :as res]
+            [zensols.util.spreadsheet :as ss]
+            [zensols.model.execute-classifier :as exc :refer (with-model-conf)]
+            [zensols.example.anon-db :as adb]))
+
+(def preds-inst (atom nil))
+
+(defn- test-annotation [anon-rec]
+  (let [{anon :instance label :class-label} anon-rec
+        sent (:text anon)
+        pred (classify-utterance sent)]
+    (log/debugf "label: %s, prediction: %s" label pred)
+    {:label label
+     :sent sent
+     :prediction pred
+     :correct? (= label pred)}))
+
+(defn- predict-test-set []
+  (swap! preds-inst
+         #(or %
+              (let [anons (adb/anons :set-type :test)
+                    results (map test-annotation anons)
+                    preds (map :correct? results)]
+                {:correct (filter true? preds)
+                 :incorrect (filter false? preds)
+                 :predictions preds
+                 :results results}))))
+
+(defn- create-prediction-report []
+  (letfn [(data-sheet [anons]
+            (->> anons
+                 (map (fn [anon]
+                        [(:class-label anon) (->> anon :instance :text)]))
+                 (cons ["Label" "Utterance"])))]
+   (let [out-file (res/resource-path :analysis-report "sa-predictions.xls")]
+     (-> (excel/build-workbook
+          (excel/workbook-hssf)
+          {"Predictions on test data"
+           (->> (predict-test-set)
+                :results
+                (map (fn [res]
+                       (let [{:keys [label sent prediction correct?]} res]
+                         [correct? label prediction sent])))
+                (cons ["Is Correct" "Gold Label" "Prediction" "Utterance"])
+                (ss/headerize))
+           "Training" (data-sheet (adb/anons))
+           "Test" (data-sheet (adb/anons :set-type :test))})
+         (ss/autosize-columns)
+         (excel/save out-file)))))
+
+(create-prediction-report)
+```
+Invoking this code creates a report on the desktop with the training data and
+its predictions on the first sheet and the dataset by its set type (training
+and testing) on the second two tabs.  We'll still correctly classify 230 of the
+238 giving a 96% accuracy.
 
 License
 --------
