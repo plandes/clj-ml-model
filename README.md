@@ -1,5 +1,5 @@
-Interface for Machine Learning Modeling
-=======================================
+Interface for Machine Learning Modeling, Testing and Training
+=============================================================
 
 This library provides generalized library to train, test and use machine
 learning models.  Specifically it:
@@ -22,6 +22,7 @@ Additional [documentation](https://plandes.github.io/clj-ml-model/codox/index.ht
 Usage
 -----
 To create, validate, test and utilize a model you must do the following:
+
 1. [Create the Corpus](#create-the-corpus)
 2. [Create Features](#create-features)
 3. [Create the model configuration](#create-the-model-configuration)
@@ -323,7 +324,6 @@ Now we can create a client friendly (to our new library) function:
        (exc/classify (model) anon)
        :label))
 ```
-
 
 License
 --------
