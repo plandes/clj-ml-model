@@ -36,6 +36,7 @@ To create, validate, test and utilize a model you must do the following:
 4. [Create the model](#create-the-model)
 5. [Evaluating the model](#evaluate-the-model)
 6. [Using the model](#use-the-model)
+7. [Testing the model](#test-the-model)
 
 Note that this example (like `clj-ml-dataset`) uses natural language processing
 but the library was written to be general purpose and other non-NLP projects
