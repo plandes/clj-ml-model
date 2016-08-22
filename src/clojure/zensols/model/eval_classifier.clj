@@ -9,7 +9,8 @@ validation (see [[*two-pass-config*]])."
   (:use [clojure.pprint :only [pprint]])
   (:require [clojure.tools.logging :as log]
             [clojure.string :as str]
-            [clojure.stacktrace :refer (print-stack-trace)])
+            [clojure.stacktrace :refer (print-stack-trace)]
+            [clojure.data.csv :as csv])
   (:require [zensols.tabres.display-results :as dr])
   (:require [zensols.model.execute-classifier :refer (model-config) :as exc]
             [zensols.model.weka :as weka]
@@ -39,7 +40,7 @@ validation (see [[*two-pass-config*]])."
         file-name (format "%s-data.arff" (:name model-conf))
         file (io/file (cl/analysis-report-dir) file-name)]
     (binding [cl/*arff-file* file]
-      (cl/write-arff (exc/instances)))
+      (cl/write-arff (exc/cross-fold-instances)))
     file))
 
 (defn display-features
@@ -106,7 +107,7 @@ validation (see [[*two-pass-config*]])."
                                feature-sets-key)
           _ (assert feature-meta-sets (format "no such feature meta set: <%s>"
                                             feature-sets-key))
-          instances (exc/instances)
+          instances (exc/cross-fold-instances)
           num-inst (.numInstances instances)
           folds *cross-fold-count*]
       (log/debugf "number of instances: %d, feature-metas: <%s>"
@@ -125,6 +126,44 @@ validation (see [[*two-pass-config*]])."
                (apply concat)
                doall))))))
 
+(defn test-train-results
+  "Test the performance of a model by training on a given set of data
+  and evaluate on the test data.
+
+  See [[train-model]] for parameter details."
+  [classifier-sets feature-sets-key]
+  (log/debugf "feature-sets-key=%s, classifier-sets=%s"
+              feature-sets-key classifier-sets)
+  (let [model-conf (model-config)
+        _ (log/debugf "model config keys: %s" (keys model-conf))
+        classifier-attrib (first (exc/model-classifier-label))
+        feature-meta-sets (get (:feature-sets-set model-conf)
+                               feature-sets-key)
+        _ (log/debugf "feature meta sets: <%s>"
+                      (pr-str feature-meta-sets))
+        {train-instances :train test-instances :test}
+        (exc/train-test-instances)]
+    (assert feature-meta-sets (format "no such feature meta set: <%s>"
+                                      feature-sets-key))
+    (assert train-instances "train-instances")
+    (assert test-instances "test-instances")
+    (log/debugf "number of train/test instances:(%d, %d), feature-metas: <%s>"
+                (.numInstances train-instances)
+                (.numInstances test-instances)
+                (pr-str feature-meta-sets))
+    (log/tracef "train instances class: %s"
+                (-> train-instances .getClass .getName))
+    (log/tracef "test instances class: %s"
+                (-> test-instances .getClass .getName))
+    (binding [cl/*class-feature-meta* (name classifier-attrib)]
+      (->> classifier-sets
+           (map weka/make-classifiers)
+           (apply concat)
+           (map #(cl/train-test-classifier % feature-meta-sets
+                                           train-instances test-instances))
+           (apply concat)
+           doall))))
+
 (defn compile-results
   "Run cross-fold validation and compile into a nice results map sorted by
   performance.
@@ -135,9 +174,19 @@ validation (see [[*two-pass-config*]])."
   constructed classifier (see [[zensols.model.weka/make-classifiers]])
 
   * **feature-sets-key** identifies what feature set (see
-  **:feature-sets-set** in [[with-model-conf]])"
-  [classifier-sets feature-set-key]
-  (let [res (cross-validate-results classifier-sets feature-set-key)]
+  **:feature-sets-set** in [[with-model-conf]])
+
+  Keys
+  ----
+  * **:test-type** the type of test to run; one of:
+      * `:cross-validation`: run a N fold cross validation (default)
+      * `:test-train`: train the classifier and then evaluate"
+  [classifier-sets feature-set-key &
+   {:keys [test-type] :or {test-type :cross-validation}}]
+  (let [test-fn (case test-type
+                  :cross-validation cross-validate-results
+                  :test-train test-train-results)
+        res (test-fn classifier-sets feature-set-key)]
     (log/debugf "compile results count %d" (count res))
     (cl/compile-results res)))
 
@@ -157,9 +206,14 @@ validation (see [[*two-pass-config*]])."
 
   Keys
   ----
-  :only-stats? if `true` only return statistic data"
+  * **:only-stats?** if `true` only return statistic data
+  * **:test-type** the type of test to run; one of:
+      * `:cross-validation`: run a N fold cross validation (default)
+      * `:test-train`: train the classifier and then evaluate"
   [classifier-sets feature-set-key &
-   {:keys [only-stats?] :or [only-stats? true]}]
+   {:keys [only-stats? test-type]
+    :or {only-stats? true
+         test-type :cross-validation}}]
   (let [res (compile-results classifier-sets feature-set-key)]
     (log/debugf "terse results count %d" (count res))
     (map (fn [elt]
@@ -209,7 +263,7 @@ validation (see [[*two-pass-config*]])."
   (let [classifier (:classifier model)
         attribs (map name (:feature-metas model))
         classify-attrib (first (exc/model-classifier-label))
-        instances (exc/instances)]
+        instances (exc/cross-fold-instances)]
     (binding [cl/*get-data-fn* #(identity instances)
               cl/*class-feature-meta* (name classify-attrib)]
       (log/infof "training model %s classifier %s with %d instances"
@@ -218,37 +272,6 @@ validation (see [[*two-pass-config*]])."
                  (.numInstances instances))
       (cl/train-classifier classifier attribs)
       model)))
-
-(defn- train-test-results
-  "Test the performance of a model by training on a given set of data
-  and evaluate on the test data.
-
-  * **classifier-sets** is a key in [[zensols.model.weka/*classifier*]] or a
-  constructed classifier (see [[zensols.model.weka/make-classifiers]])
-
-  * **feature-sets-key** identifies what feature set (see
-  **:feature-sets-set** in [[with-model-conf]])"
-  [classifier-sets feature-sets-key]
-  (log/debugf "feature-sets-key=%s" feature-sets-key)
-  (let [model-conf (model-config)]
-    (log/debugf "model config keys: %s" (keys model-conf))
-    (let [classifier-attrib (first (exc/model-classifier-label))
-          feature-meta-sets (get (:feature-sets-set model-conf)
-                               feature-sets-key)
-          _ (assert feature-meta-sets (format "no such feature meta set: <%s>"
-                                              feature-sets-key))
-          instances (exc/instances)
-          num-inst (.numInstances instances)]
-      (log/debugf "number of instances: %d, feature-metas: <%s>"
-                  num-inst (pr-str feature-meta-sets))
-      (log/tracef "instances class: %s" (-> instances .getClass .getName))
-      (binding [cl/*get-data-fn* #(identity instances)
-                cl/*class-feature-meta* (name classifier-attrib)]
-        (->> classifier-sets
-             (map #(cross-validate-results-struct
-                    (weka/make-classifiers %) feature-meta-sets))
-             (apply concat)
-             doall)))))
 
 (defn- model-persist-name []
   (:name (model-config)))
@@ -305,6 +328,48 @@ validation (see [[*two-pass-config*]])."
       (log/infof "wrote results file: %s" output-file)
       output-file)))
 
+(defn train-test-series
+  "Test and train with different rations and return the results.  The return
+  data writable directly as an Excel file.  However, you can also save it as a
+  CSV with [[write-csv-train-test-series]].
+
+  The keys are the classifier name and the values are the 2D result matrix."
+  [classifiers meta-set divide-ratio-config]
+  (let [{:keys [start stop step]} divide-ratio-config
+        {:keys [divide-by-set]} (model-config)]
+    (->> classifiers
+         (map (fn [classifier]
+                (->> (range (* start 100) (* stop 100) (* step 100))
+                     (map #(/ % 100))
+                     (map (fn [divide-ratio]
+                            (log/infof "dividing train/test split by %.3f"
+                                       divide-ratio)
+                            (divide-by-set divide-ratio)
+                            (compile-results (list classifier) meta-set :test-type :test-train)))
+                     (apply concat)
+                     (map (fn [res]
+                            (let [name (-> res :classifier cl/classifier-name)]
+                              {:name name
+                               :stats (map #(get res %) [:train-total :test-total :wfmeasure :wprecision :wrecall])})))
+                     (#(hash-map (-> % first :name)
+                                 (->> (map :stats %)
+                                      (cons ["Train" "Test" "F-Measure" "Precision" "Recall"])))))))
+         (apply merge))))
+
+(defn write-csv-train-test-series
+  "Write the results produced with [[train-test-series]] as a CSV file to the
+  analysis directory."
+  [res]
+  (let [{model-name :name} (model-config)]
+    (->> res
+         (map (fn [[classifier-name data]]
+                (println classifier-name data)
+                (let [out-file (io/file (cl/analysis-report-dir)
+                                        (format "%s-%s-train-test-series.csv"
+                                                model-name classifier-name))]
+                  (with-open [writer (io/writer out-file)]
+                    (csv/write-csv writer data)))))
+         doall)))
 
 
 ;; two pass

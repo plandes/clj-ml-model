@@ -1,7 +1,11 @@
 (ns ^{:doc
 "A *client* entry point library to help with executing a trained classifier.
 The classifier is tested and trained in the [[zensols.model.eval-classifier]]
-namespace."
+namespace.
+
+This library expects that you configure your model.  To learn how to do that,
+see [[with-model-conf]] and see the [repo
+docs](https://github.com/plandes/clj-ml-model)."
       :author "Paul Landes"}
     zensols.model.execute-classifier
   (:use [clojure.java.io :as io :only [input-stream output-stream file]])
@@ -22,15 +26,16 @@ namespace."
   spreadsheet cells
 
   * **:create-feature-sets-fn** function creates a sequence of maps with each
-  map having key/value pairs of the features of the model to be populated; it's
-  input is what is provided as the argument
-  to [[zensols.model.execute-classifier/classify]]
+  map having key/value pairs of the features of the model to be populated; it
+  is passed with optional keys:
+      * **:set-type** the data set type: `:test` or `:train`, which uses the [data set library](https://plandes.github.io/clj-ml-dataset/codox/zensols.dataset.db.html#var-instances)
+      convention for easy integration
 
   * **:create-features-fn** just like **create-feature-sets-fn** but creates a
   single feature map used for test/execution after the classifier is built;
-  it's input is what is provided as the argument
-  to [[zensols.model.execute-classifier/classify]] and the context
-  generated at train time by **:context-fn** (see below)
+  it's called with the arguments that [[classify]] is given to classify ann
+  instance along with the context generated at train time by **:context-fn** if
+  it was provided (see below)
 
   * **:feature-metas-fn** a function that creates a map of key/value
   pairs describing the features where the values are `string`, `boolean`,
@@ -51,9 +56,10 @@ namespace."
   * **:model-return-keys** what the classifier will return (by default
   `{:label :distributions}`)
 
-  * **:instances-inst** at atom used to cache the `weka.core.Instances`
-  generated from **:create-feature-sets-fn**; when this atom is derefed as
-  `nil` **:create-feature-sets-fn** is called to create the feature maps
+  * **:cross-fold-instances-inst** at atom used to cache the
+  `weka.core.Instances` generated from **:create-feature-sets-fn**; when this
+  atom is derefed as `nil` **:create-feature-sets-fn** is called to create the
+  feature maps
 
   * **:feature-sets-set** a map of key/value pairs where keys are names of
   feature sets and the values are lists of lists of features as symbols"
@@ -82,14 +88,10 @@ namespace."
          (into {}))))
 
 (defn- create-instances
-  "This is called with no parameters to create the data set for cross
-  validation and/or train/test splits.
+  "Create the weka Instances object using sets of features created from
+  **:create-feature-sets-fn**.  If **context** is given call :set-context-fn.
 
-  It uses `:create-feature-sets-fn` from the model."
-  ([]
-   (let [model-conf (model-config)]
-     (log/info "generating feature sets from model config")
-     (create-instances ((:create-feature-sets-fn model-conf)))))
+  See [[with-model-conf]], which explains the keys."
   ([features-set]
    (create-instances features-set nil))
   ([features-set context]
@@ -104,12 +106,28 @@ namespace."
       (model-classifier-feature-types)
       (model-classifier-label)))))
 
-(defn instances
+(defn cross-fold-instances
   "Called by [[eval-classifier]] to create the data set for cross validation.
   See [[create-instances]]."
   []
-  (let [instances-inst (:instances-inst (model-config))]
-    (swap! instances-inst #(or % (create-instances)))))
+  (log/info "generating feature sets from model config")
+  (let [{:keys [cross-fold-instances-inst create-feature-sets-fn]} (model-config)]
+    (assert cross-fold-instances-inst
+            "No :cross-fold-instances-inst atom set on model configuration")
+    (swap! cross-fold-instances-inst
+           #(or % (create-instances (create-feature-sets-fn))))))
+
+(defn train-test-instances
+  "Called by [[eval-classifier]] to create the data set for cross validation.
+  See [[create-instances]]."
+  []
+  (log/info "generating feature sets from model config")
+  (let [{:keys [test-train-instances-inst create-feature-sets-fn]} (model-config)]
+    (assert test-train-instances-inst
+            "No :instances-inst atom set on model configuration")
+    (swap! test-train-instances-inst
+           #(or % {:train (create-instances (create-feature-sets-fn :set-type :train))
+                   :test (create-instances (create-feature-sets-fn :set-type :test))}))))
 
 (defn model-exists?
   "Return whether a model file exists on the file system."

@@ -193,6 +193,9 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
   []
   (apply *get-data-fn* nil))
 
+(def ^:dynamic *rand-fn*
+  (fn [] (java.util.Random. (System/currentTimeMillis))))
+
 (defn- cross-validate
   "Invoke the Weka wrapper to cross validate.
 
@@ -209,11 +212,9 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
                 (Evaluation. insts))]
      ;; docs say that deep clone is performed on the classifier so it should be
      ;; reusable after evaluation
-     (.crossValidateModel eval classifier insts folds
-                                        ;(java.util.Random. 1)
-                          (java.util.Random. (System/currentTimeMillis))
-                          zero-arg-arr)
-     (merge {:eval eval}
+     (.crossValidateModel eval classifier insts folds (*rand-fn*) zero-arg-arr)
+     (merge {:eval eval
+             :train-total (.numInstances insts)}
             (if two-pass-validation?
               {:attribs (->> (weka/attributes-for-instances
                               (-> eval (.getTrainInstances) (.get 0)))
@@ -263,6 +264,26 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
                 *get-data-fn* get-data]
         (cross-validate *cross-fold-count*)))))
 
+(defn eval-to-results [eval attribs classifier]
+  {:eval eval
+   :feature-metas attribs
+   :classifier classifier
+   :classify-attrib (keyword *class-feature-meta*)
+
+     ;;; evaluation results
+   ;; basic stats
+   :instances-total (.numInstances eval)
+   :instances-correct (.correct eval)
+   :instances-incorrct (.incorrect eval)
+
+   ;; metrics
+   :accuracy (.pctCorrect eval)
+   :kappa (.kappa eval)
+   :rmse (.errorRate eval)
+   :wprecision (.weightedPrecision eval)
+   :wrecall (.weightedRecall eval)
+   :wfmeasure (.weightedFMeasure eval)})
+
 (defn cross-validate-tests
   "Run the cross validation for **classifier** and **attributes** (symbol
   set)."
@@ -271,26 +292,10 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
              (.getName (.getClass classifier))
              (str/join ", " attributes))
   (let [data (get-data)
-        {:keys [eval attribs]}
+        {:keys [eval attribs train-total] :as cve}
         (cross-validate-evaluation classifier data attributes)]
-    {:eval eval
-     :feature-metas (or attribs attributes)
-     :classifier classifier
-     :classify-attrib (keyword *class-feature-meta*)
-
-     ;;; evaluation results
-     ;; basic stats
-     :instances-total (.numInstances eval)
-     :instances-correct (.correct eval)
-     :instances-incorrct (.incorrect eval)
-
-     ;; metrics
-     :accuracy (.pctCorrect eval)
-     :kappa (.kappa eval)
-     :rmse (.errorRate eval)
-     :wprecision (.weightedPrecision eval)
-     :wrecall (.weightedRecall eval)
-     :wfmeasure (.weightedFMeasure eval)}))
+    (merge (select-keys cve [train-total])
+           (eval-to-results eval (or attribs attributes) classifier))))
 
 (defn train-classifier
   "Train **classifier** (`weka.classifiers.Classifier`)."
@@ -302,6 +307,35 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
         train-data (filter-attribute-data raw-data attributes)]
     (.buildClassifier classifier train-data)
     classifier))
+
+(defn test-classifier
+  "Test/evaluate **classifier** (`weka.classifiers.Classifier`)."
+  [classifier attributes train-data test-data]
+  (log/infof "testing classifer %s on %s"
+             (.getName (.getClass classifier))
+             (str/join ", " attributes))
+  (let [train-data (filter-attribute-data train-data attributes)
+        test-data (->> (filter-attribute-data test-data attributes)
+                       weka/clone-instances)
+        eval (Evaluation. train-data)]
+    (.evaluateModel eval classifier test-data zero-arg-arr)
+    eval))
+
+(defn train-test-classifier [classifier feature-meta-sets
+                             train-instances test-instances]
+  (binding [*get-data-fn* #(identity train-instances)]
+    (->> feature-meta-sets
+         (map #(map name %))
+         (map (fn [attribs]
+                (log/debugf "classifier: %s, attribs: %s"
+                            classifier (pr-str attribs))
+                (train-classifier classifier attribs)
+                (-> (test-classifier classifier attribs
+                                     train-instances test-instances)
+                    (eval-to-results attribs classifier)
+                    (assoc :train-total (.numInstances train-instances)
+                           :test-total (.numInstances test-instances)))))
+         doall)))
 
 (defn classify-instance
   "Make predictions for all instances.
@@ -376,7 +410,7 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
           (select-keys res [:accuracy :wprecision :wrecall :wfmeasure
                             :kappa :rmse :classifier :classify-attrib
                             :instances-total :instances-correct
-                            :instances-incorrct])
+                            :instances-incorrct :train-total :test-total])
           {:feature-metas (map keyword (-> res :feature-metas))
            :result res
            :all-results results}))
