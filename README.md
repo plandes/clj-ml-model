@@ -491,8 +491,14 @@ doesn't change our outcomes.
 The `ec/write-csv-train-test-series` writes the result outcomes to a CSV file,
 which we can then use to find the *elbow* or point where we start to *overfit*
 the model.  The `R` code to do this and the results are in the
-[example project repository](#example).
+[example project repository](#example).  This code creates the following graph:
+![Overfitting Example](https://plandes.github.io/clj-example-nlp-ml/results/speech-act-J48-train-test-series.svg)
 
+In the graph we see the we have just below 0.4 F-measuer for 48 training
+instances, it then ballons to above 0.9 at 72 instances so the classifier (J48
+decision tree for this example) learns quickly.  However we see the first drop
+at 120 training instances (the red portion), which is mentioned *elbow* where
+we typically see the classifier start to overtrain.
 
 License
 --------
