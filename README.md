@@ -450,7 +450,6 @@ The `adb-keys` are the keys that eventually get passed to the
 
 In our evaluation code we need to create a new atom to cache the results of the
 testing and training instances:
-
 ```clojure
 (dyn-init-var *ns* 'test-train-instances-inst (atom nil))
 ```
