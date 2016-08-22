@@ -219,6 +219,37 @@ validation (see [[*two-pass-config*]])."
       (cl/train-classifier classifier attribs)
       model)))
 
+(defn- train-test-results
+  "Test the performance of a model by training on a given set of data
+  and evaluate on the test data.
+
+  * **classifier-sets** is a key in [[zensols.model.weka/*classifier*]] or a
+  constructed classifier (see [[zensols.model.weka/make-classifiers]])
+
+  * **feature-sets-key** identifies what feature set (see
+  **:feature-sets-set** in [[with-model-conf]])"
+  [classifier-sets feature-sets-key]
+  (log/debugf "feature-sets-key=%s" feature-sets-key)
+  (let [model-conf (model-config)]
+    (log/debugf "model config keys: %s" (keys model-conf))
+    (let [classifier-attrib (first (exc/model-classifier-label))
+          feature-meta-sets (get (:feature-sets-set model-conf)
+                               feature-sets-key)
+          _ (assert feature-meta-sets (format "no such feature meta set: <%s>"
+                                              feature-sets-key))
+          instances (exc/instances)
+          num-inst (.numInstances instances)]
+      (log/debugf "number of instances: %d, feature-metas: <%s>"
+                  num-inst (pr-str feature-meta-sets))
+      (log/tracef "instances class: %s" (-> instances .getClass .getName))
+      (binding [cl/*get-data-fn* #(identity instances)
+                cl/*class-feature-meta* (name classifier-attrib)]
+        (->> classifier-sets
+             (map #(cross-validate-results-struct
+                    (weka/make-classifiers %) feature-meta-sets))
+             (apply concat)
+             doall)))))
+
 (defn- model-persist-name []
   (:name (model-config)))
 

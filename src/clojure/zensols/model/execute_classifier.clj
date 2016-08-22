@@ -40,8 +40,13 @@ namespace."
   * **:class-feature-meta-fn** just like a **feature-metas-fn** but
   describes the class
 
-  * **:context-fn** a function that creates a context (i.e. stats on the entire
+  * **:context-fn** a function that creates a context (ie. stats on the entire
   training set) and passed to **:create-features-fn**
+
+  * **:set-context-fn** (optional) a function that is called to set the context
+  created with **:context-fn** and retrieved from the persisted model; this is
+  useful when using/executing the model and the context is needed before
+  **:create-features-fn** is called
 
   * **:model-return-keys** what the classifier will return (by default
   `{:label :distributions}`)
@@ -77,7 +82,9 @@ namespace."
          (into {}))))
 
 (defn- create-instances
-  "This is called with no parameters to create the training/test sets.
+  "This is called with no parameters to create the data set for cross
+  validation and/or train/test splits.
+
   It uses `:create-feature-sets-fn` from the model."
   ([]
    (let [model-conf (model-config)]
@@ -88,18 +95,17 @@ namespace."
   ([features-set context]
    (log/infof "generated instances from %d feature sets" (count features-set))
    (log/tracef "feature sets: <<%s>>" (pr-str features-set))
-   (let [model-conf (model-config)
-         {set-context-fn :set-context-fn} model-conf]
+   (let [{:keys [name set-context-fn]} (model-config)]
      (if (and set-context-fn context)
        (set-context-fn context))
      (weka/instances
-      (format "%s-classify" (:name model-conf))
+      (format "%s-classify" name)
       features-set
       (model-classifier-feature-types)
       (model-classifier-label)))))
 
 (defn instances
-  "Called by [[eval-classifier]] to create the training/test sets.
+  "Called by [[eval-classifier]] to create the data set for cross validation.
   See [[create-instances]]."
   []
   (let [instances-inst (:instances-inst (model-config))]
@@ -126,6 +132,7 @@ namespace."
            context :context} model
           model-conf (model-config)
           attrib-keys (keys (keyword feature-metas))
+          ;; creates an Instances with a single row/Instance of nulls
           feature-set (zipmap attrib-keys (repeat (count attrib-keys) nil))
           features-set (list feature-set)
           attribs (map name feature-metas)
@@ -210,6 +217,7 @@ namespace."
   (with-model-conf (:model-conf model)
     (let [{classifier :classifier
            feature-metas :feature-metas
+           ;; this was the context that was persisted with the model
            context :context} model
           _ (log/tracef "context: <%s>" context)
           model-conf (model-config)
