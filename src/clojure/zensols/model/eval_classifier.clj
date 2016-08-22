@@ -363,7 +363,6 @@ validation (see [[*two-pass-config*]])."
   (let [{model-name :name} (model-config)]
     (->> res
          (map (fn [[classifier-name data]]
-                (println classifier-name data)
                 (let [out-file (io/file (cl/analysis-report-dir)
                                         (format "%s-%s-train-test-series.csv"
                                                 model-name classifier-name))]
