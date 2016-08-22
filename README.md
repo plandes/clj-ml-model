@@ -37,6 +37,7 @@ To create, validate, test and utilize a model you must do the following:
 5. [Evaluating the model](#evaluate-the-model)
 6. [Using the model](#use-the-model)
 7. [Testing the model](#test-the-model)
+8. [Automating testing and overfitting](#automating-testing-and-overfitting)
 
 Note that this example (like `clj-ml-dataset`) uses natural language processing
 but the library was written to be general purpose and other non-NLP projects
@@ -129,8 +130,8 @@ the `feature-metas` [function](#create-features).  The levels are:
    current feature metadata set iteration.
 
 We create a `classifiers` binding to store what *genera* of classifiers we want
-to use.  See the [classifiers dynamic binding](http://?????) for more
-information.
+to use.  See the [classifiers dynamic binding](https://plandes.github.io/clj-ml-model/codox/zensols.model.weka.html#var-*classifiers*)
+for more information.
 
 ```clojure
 (ns zensols.example.sa-eval
@@ -160,7 +161,7 @@ up our feature/classifier configuration without having to regenerate feature
 sets for each model testing iteration.
 
 ```clojure
-(def instances-inst (atom nil))
+(def cross-fold-instances-inst (atom nil))
 ```
 
 Finally we extend the model configuration with the `Instances` atom and our
@@ -169,7 +170,7 @@ feature metadata sets.
 ```clojure
 (defn- create-model-config []
   (merge (sf/create-model-config)
-         {:instances-inst instances-inst
+         {:cross-fold-instances-inst cross-fold-instances-inst
           :feature-sets-set (feature-sets-set)}))
 ```
 
@@ -211,8 +212,8 @@ For both models it tests with the `zeror` and `fast` classifiers.  The first
 `zeror` is a majority rule classifier usually used to generate a baseline to
 gauge relative performance gains.  The `fast` classifier are a group of
 classifiers that train fast.  See the
-[classifiers dynamic binding](http://?????) for more information on classifier
-genres.
+[classifiers dynamic binding](https://plandes.github.io/clj-ml-model/codox/zensols.model.weka.html#var-*classifiers*)
+for more information on classifier genres.
 
 
 #### Cross Validation Report
@@ -223,6 +224,7 @@ to leave it running for a while and generate a spreadsheet report as output.
 This report contains the feature set, classifiers used, and performance
 metrics.  ```clojure (with-model-conf (create-model-config) (ec/eval-and-write
 classifiers :huge-meta-set)) ```
+
 
 ### Persist/Save the Model
 Once you're happy with the performance of your model you can save it and use it
@@ -235,14 +237,15 @@ in the same or different JVM instance.
 ```
 
 This creates a binary model file where you've configured the
-[model output directory](????classifier/model-dir).  More information on how to
-configure this is in the [example project repo](????).
+[model output directory](https://plandes.github.io/clj-ml-model/codox/zensols.model.classifier.html#var-model-dir).  More information on how to
+configure see the code example in the [example project repository](#example).
 
 The information encoded in this file includes:
 * The trained classifier
 * The features of the model
 * Performance metrics like F-measure, recall, precision, predictions
-* The context (TODO: refer from here)
+* The context created with the [model configuration's :context-fn](https://plandes.github.io/clj-ml-model/codox/zensols.model.execute-classifier.html#var-with-model-conf) function
+
 
 ### Use the Model
 First let's create a namespace to work with our new model and a function to
@@ -426,6 +429,71 @@ Invoking this code creates a report on the desktop with the training data and
 its predictions on the first sheet and the dataset by its set type (training
 and testing) on the second two tabs.  We'll still correctly classify 230 of the
 238 giving a 96% accuracy.
+
+
+### Automating testing and overfitting
+
+There is an easier way to test and train our model by using the
+`clj-ml-dataset` library, but first we have to make a few changes.  The
+`create-feature-sets` function we wrote earlier needs to take a test/train
+ratio parameter so the data set library can re-create the training and testing
+sets:
+```clojure
+(defn create-feature-sets [& adb-keys]
+  (->> (apply adb/anons adb-keys)
+       (map #(merge {:sa (:class-label %)
+                     :utterance (->> % :instance :text)}
+                    (create-features (:instance %))))))
+```
+The `adb-keys` are the keys that eventually get passed to the
+[instances](https://plandes.github.io/clj-ml-dataset/codox/zensols.dataset.db.html#var-instances) function.
+
+In our evaluation code we need to create a new atom to cache the results of the
+testing and training instances:
+
+```clojure
+(dyn-init-var *ns* 'test-train-instances-inst (atom nil))
+```
+
+This atom needs to be added to the model configuration.  We also need to tell
+the framework how to repartition the training and testing data sets and clear
+the train/test atom that caches the instances:
+```clojure
+(defn- create-model-config []
+  (letfn [(divide-by-set [divide-ratio]
+            (adb/divide-by-set divide-ratio :shuffle? false)
+            (reset! test-train-instances-inst nil))]
+   (merge (sf/create-model-config)
+          {:cross-fold-instances-inst cross-fold-instances-inst
+           :test-train-instances-inst test-train-instances-inst
+           :feature-sets-set (feature-sets-set)
+           :divide-by-set divide-by-set})))
+```
+The `divide-by-set` function defined above creates a new *division* of testing
+and training data and in our case will incrementall move instances from the
+training data to the testing data.  With the `shuffle? false` we do *not*
+shuffle the data set before making the new split so we are effectively
+re-partitioning by moving the train/test data set demarcation line.
+
+Now we're ready to call the framework to train the classifier on the training
+instances and then test the trained classifier on the test instances:
+```clojure
+(binding [cl/*rand-fn* (fn [] (java.util.Random. 1))]
+  (with-model-conf (create-model-config)
+    (->> (ec/train-test-series
+          [:j48] :set-best {:start 0.1 :stop 1 :step 0.05})
+         ec/write-csv-train-test-series)))
+```
+In this example, the `cl/*rand-fn*` tells the framework to use `1` as the seed
+so the ordering of the instances across training/testing data is always the
+same, which means if running the same tests (including cross validation)
+doesn't change our outcomes.
+
+The `ec/write-csv-train-test-series` writes the result outcomes to a CSV file,
+which we can then use to find the *elbow* or point where we start to *overfit*
+the model.  The `R` code to do this and the results are in the
+[example project repository](#example).
+
 
 License
 --------
