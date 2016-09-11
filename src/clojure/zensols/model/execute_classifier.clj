@@ -139,8 +139,8 @@ docs](https://github.com/plandes/clj-ml-model)."
 
 (defn read-model
   "Read/unpersist the model from the file system."
-  [& {:keys [fail-if-exist?] :or {fail-if-exist? false}}]
-  (cl/read-model (:name (model-config)) :fail-if-exist? fail-if-exist?))
+  [& {:keys [fail-if-not-exists?] :or {fail-if-not-exists? true}}]
+  (cl/read-model (:name (model-config)) :fail-if-not-exists? fail-if-not-exists?))
 
 (defn prime-model
   "Prime a trained or unpersisted ([[read-model]]) model for classification

@@ -138,12 +138,12 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
 
   Keys
   ----
-  * **:fail-if-exist?** if `true` then throw an exception if the model file is
-  missing"
-  [name & {:keys [fail-if-exist?] :or {fail-if-exist? false}}]
+  * **:fail-if-not-exists?** if `true` then throw an exception if the model
+  file is missing"
+  [name & {:keys [fail-if-not-exists?] :or {fail-if-not-exists? true}}]
   (let [file (model-read-resource name)
         exists? (.exists file)]
-    (if (and fail-if-exist? (not exists?))
+    (if (and fail-if-not-exists? (not exists?))
       (throw (ex-info (format "no model file found: %s" file)
                       {:file file})))
     (if-not exists?
