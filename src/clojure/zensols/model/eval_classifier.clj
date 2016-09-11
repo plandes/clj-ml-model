@@ -355,7 +355,8 @@ validation (see [[*two-pass-config*]])."
                             (log/infof "dividing train/test split by %.3f"
                                        divide-ratio)
                             (divide-by-set divide-ratio)
-                            (compile-results (list classifier) meta-set :test-type :train-test)))
+                            (binding [*default-set-type* :train-test]
+                              (compile-results (list classifier) meta-set))))
                      (apply concat)
                      (map (fn [res]
                             (let [name (-> res :classifier cl/classifier-name)]
