@@ -55,9 +55,10 @@ validation (see [[*two-pass-config*]])."
 
   For the non-zero-arg form, see [[with-model-conf]]."
   ([]
-   (let [{:keys [feature-metas-fn class-feature-meta-fn create-feature-sets-fn]}
-         (model-config)]
-     (display-features (feature-metas-fn)
+   (let [{:keys [feature-metas-fn display-feature-metas-fn
+                 class-feature-meta-fn create-feature-sets-fn]} (model-config)
+         display-feature-metas-fn (or display-feature-metas-fn feature-metas-fn)]
+     (display-features (display-feature-metas-fn)
                        (class-feature-meta-fn)
                        (create-feature-sets-fn))))
   ([feature-metas class-feature-meta feature-sets]
@@ -171,6 +172,14 @@ validation (see [[*two-pass-config*]])."
            (apply concat)
            doall))))
 
+(defn- run-tests [classifier-sets feature-set-key]
+  (let [test-fn (case *default-set-type*
+                  :cross-validation cross-validate-results
+                  :test-train test-train-results)
+        res (test-fn classifier-sets feature-set-key)]
+    (log/debugf "results count %d" (count res))
+    res))
+
 (defn compile-results
   "Run cross-fold validation and compile into a nice results map sorted by
   performance.
@@ -181,19 +190,10 @@ validation (see [[*two-pass-config*]])."
   constructed classifier (see [[zensols.model.weka/make-classifiers]])
 
   * **feature-sets-key** identifies what feature set (see
-  **:feature-sets-set** in [[with-model-conf]])
-
-  Keys
-  ----
-  * **:test-type** the type of test to run (see [[*default-set-type*]])"
-  [classifier-sets feature-set-key &
-   {:keys [test-type] :or {test-type *default-set-type*}}]
-  (let [test-fn (case test-type
-                  :cross-validation cross-validate-results
-                  :test-train test-train-results)
-        res (test-fn classifier-sets feature-set-key)]
-    (log/debugf "compile results count %d" (count res))
-    (cl/compile-results res)))
+  **:feature-sets-set** in [[with-model-conf]])"
+  [classifier-sets feature-set-key]
+  (->> (run-tests classifier-sets feature-set-key)
+       cl/compile-results))
 
 (defn terse-results
   "Return terse cross-validation results in an array:
@@ -211,12 +211,10 @@ validation (see [[*two-pass-config*]])."
 
   Keys
   ----
-  * **:only-stats?** if `true` only return statistic data
-  * **:test-type** the type of test to run (see [[*default-set-type*]])"
+  * **:only-stats?** if `true` only return statistic data"
   [classifier-sets feature-set-key &
-   {:keys [only-stats? test-type]
-    :or {only-stats? true
-         test-type *default-set-type*}}]
+   {:keys [only-stats?]
+    :or {only-stats? true}}]
   (let [res (compile-results classifier-sets feature-set-key)]
     (log/debugf "terse results count %d" (count res))
     (map (fn [elt]
@@ -326,7 +324,7 @@ validation (see [[*two-pass-config*]])."
           model-conf (model-config)]
       (cl/excel-results
        [{:sheet-name (format "%s Classification" (str/capitalize (:name model-conf)))
-         :results (cross-validate-results classifier-sets set-key)}]
+         :results (run-tests classifier-sets set-key)}]
        output-file)
       (log/infof "wrote results file: %s" output-file)
       output-file)))

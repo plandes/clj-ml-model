@@ -42,6 +42,9 @@ docs](https://github.com/plandes/clj-ml-model)."
   `numeric`, or a sequence of strings representing possible enumeration
   values
 
+  * **:display-feature-metas-fn** like **:feature-metas-fn** but used to
+  display (i.e. while debugging)
+
   * **:class-feature-meta-fn** just like a **feature-metas-fn** but
   describes the class
 
