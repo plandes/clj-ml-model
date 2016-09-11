@@ -125,12 +125,18 @@ docs](https://github.com/plandes/clj-ml-model)."
   See [[create-instances]]."
   []
   (log/info "generating feature sets from model config")
-  (let [{:keys [test-train-instances-inst create-feature-sets-fn]} (model-config)]
-    (assert test-train-instances-inst
+  (let [{:keys [train-test-instances-inst create-feature-sets-fn]} (model-config)]
+    (assert train-test-instances-inst
             "No :instances-inst atom set on model configuration")
-    (swap! test-train-instances-inst
-           #(or % {:train (create-instances (create-feature-sets-fn :set-type :train))
-                   :test (create-instances (create-feature-sets-fn :set-type :test))}))))
+    (swap! train-test-instances-inst
+           (fn [data]
+             (if data
+               data
+               (let [train-sets (create-feature-sets-fn :set-type :train)
+                     test-sets (create-feature-sets-fn :set-type :test)]
+                 {:train (create-instances train-sets)
+                  :test (create-instances test-sets)
+                  :train-test (create-instances (concat train-sets test-sets))}))))))
 
 (defn model-exists?
   "Return whether a model file exists on the file system."

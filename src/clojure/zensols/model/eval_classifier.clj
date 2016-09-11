@@ -25,8 +25,17 @@ validation (see [[*two-pass-config*]])."
   "The default type of test, which is one of:
 
       * `:cross-validation`: run a N fold cross validation (default)
-      * `:test-train`: train the classifier and then evaluate"
+      * `:train-test`: train the classifier and then evaluate"
   :cross-validation)
+
+(defn- by-set-type-instances [set-type]
+  (case set-type
+    :cross-validation (exc/cross-fold-instances)
+    :train-test (:train-test (exc/train-test-instances))
+    :test (:test (exc/train-test-instances))
+    :train (:train (exc/train-test-instances))
+    true (throw (ex-info "Unknon set type"
+                         {:set-type *default-set-type*}))))
 
 (defn print-model-config
   "Pretty print the model configuation set with [[with-model-conf]]."
@@ -47,7 +56,7 @@ validation (see [[*two-pass-config*]])."
         file-name (format "%s-data.arff" (:name model-conf))
         file (io/file (cl/analysis-report-resource) file-name)]
     (binding [cl/*arff-file* file]
-      (cl/write-arff (exc/cross-fold-instances)))
+      (cl/write-arff (by-set-type-instances :train-test)))
     file))
 
 (defn display-features
@@ -134,7 +143,7 @@ validation (see [[*two-pass-config*]])."
                (apply concat)
                doall))))))
 
-(defn test-train-results
+(defn train-test-results
   "Test the performance of a model by training on a given set of data
   and evaluate on the test data.
 
@@ -175,7 +184,7 @@ validation (see [[*two-pass-config*]])."
 (defn- run-tests [classifier-sets feature-set-key]
   (let [test-fn (case *default-set-type*
                   :cross-validation cross-validate-results
-                  :test-train test-train-results)
+                  :train-test train-test-results)
         res (test-fn classifier-sets feature-set-key)]
     (log/debugf "results count %d" (count res))
     res))
@@ -254,17 +263,23 @@ validation (see [[*two-pass-config*]])."
       (merge {:name (:name (model-config))
               :create-time (java.util.Date.)})))
 
+(def x (atom nil))
+
+(->> @x
+     keys)
+
 (defn train-model
   "Train a model created from [[create-model]].  The model is trained on the
   full available dataset.  After the classifier is trained, you can save it to
   disk by calling [[write-model]].
 
   * **model** a model that was created with [[create-model]]"
-  [model]
+  [model & {:keys [set-type] :or {set-type *default-set-type*}}]
   (let [classifier (:classifier model)
         attribs (map name (:feature-metas model))
         classify-attrib (first (exc/model-classifier-label))
-        instances (exc/cross-fold-instances)]
+        instances (by-set-type-instances set-type)]
+    (reset! x instances)
     (binding [cl/*get-data-fn* #(identity instances)
               cl/*class-feature-meta* (name classify-attrib)]
       (log/infof "training model %s classifier %s with %d instances"
@@ -346,7 +361,7 @@ validation (see [[*two-pass-config*]])."
                             (log/infof "dividing train/test split by %.3f"
                                        divide-ratio)
                             (divide-by-set divide-ratio)
-                            (compile-results (list classifier) meta-set :test-type :test-train)))
+                            (compile-results (list classifier) meta-set :test-type :train-test)))
                      (apply concat)
                      (map (fn [res]
                             (let [name (-> res :classifier cl/classifier-name)]
