@@ -263,11 +263,6 @@ validation (see [[*two-pass-config*]])."
       (merge {:name (:name (model-config))
               :create-time (java.util.Date.)})))
 
-(def x (atom nil))
-
-(->> @x
-     keys)
-
 (defn train-model
   "Train a model created from [[create-model]].  The model is trained on the
   full available dataset.  After the classifier is trained, you can save it to
@@ -279,7 +274,6 @@ validation (see [[*two-pass-config*]])."
         attribs (map name (:feature-metas model))
         classify-attrib (first (exc/model-classifier-label))
         instances (by-set-type-instances set-type)]
-    (reset! x instances)
     (binding [cl/*get-data-fn* #(identity instances)
               cl/*class-feature-meta* (name classify-attrib)]
       (log/infof "training model %s classifier %s with %d instances"
