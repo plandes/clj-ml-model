@@ -21,6 +21,13 @@ validation (see [[*two-pass-config*]])."
   validation (see [[cmpile-results]])."
   10)
 
+(def ^:dynamic *default-set-type*
+  "The default type of test, which is one of:
+
+      * `:cross-validation`: run a N fold cross validation (default)
+      * `:test-train`: train the classifier and then evaluate"
+  :cross-validation)
+
 (defn print-model-config
   "Pretty print the model configuation set with [[with-model-conf]]."
   []
@@ -178,11 +185,9 @@ validation (see [[*two-pass-config*]])."
 
   Keys
   ----
-  * **:test-type** the type of test to run; one of:
-      * `:cross-validation`: run a N fold cross validation (default)
-      * `:test-train`: train the classifier and then evaluate"
+  * **:test-type** the type of test to run (see [[*default-set-type*]])"
   [classifier-sets feature-set-key &
-   {:keys [test-type] :or {test-type :cross-validation}}]
+   {:keys [test-type] :or {test-type *default-set-type*}}]
   (let [test-fn (case test-type
                   :cross-validation cross-validate-results
                   :test-train test-train-results)
@@ -207,13 +212,11 @@ validation (see [[*two-pass-config*]])."
   Keys
   ----
   * **:only-stats?** if `true` only return statistic data
-  * **:test-type** the type of test to run; one of:
-      * `:cross-validation`: run a N fold cross validation (default)
-      * `:test-train`: train the classifier and then evaluate"
+  * **:test-type** the type of test to run (see [[*default-set-type*]])"
   [classifier-sets feature-set-key &
    {:keys [only-stats? test-type]
     :or {only-stats? true
-         test-type :cross-validation}}]
+         test-type *default-set-type*}}]
   (let [res (compile-results classifier-sets feature-set-key)]
     (log/debugf "terse results count %d" (count res))
     (map (fn [elt]
