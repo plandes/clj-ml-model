@@ -11,7 +11,7 @@
 This namspace uses the [resource
 location](https://github.com/plandes/clj-actioncli#resource-location) system to
 configure the location of files and output analysis files.  For more
-information about the configuration specifics see [[model-dir]]
+information about the configuration specifics see [[model-read-resource]]
 and [[analysis-dir]], which both
 use [resource-path](https://plandes.github.io/clj-actioncli/codox/zensols.actioncli.resource.html#var-resource-path).
 
@@ -31,7 +31,7 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
            (weka.core.converters ArffLoader ConverterUtils$DataSink)
            (weka.filters Filter)
            (weka.core Utils Instances))
-  (:require [zensols.actioncli.resource :refer (resource-path) :as res])
+  (:require [zensols.actioncli.resource :as res])
   (:require [zensols.model.weka :as weka]))
 
 (def ^:private zero-arg-arr (into-array String []))
@@ -84,7 +84,7 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
   validation (see [[cmpile-results]])."
   10)
 
-(defn- initialize
+(defn initialize
   "Initialize model resource locations.
 
   This needs the system property `clj.nlp.parse.model` set to a directory that
@@ -97,50 +97,51 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
   []
   (log/debug "initializing")
   (res/register-resource :model :system-property "model")
-  (res/register-resource :model-create :pre-path :model :system-file "zensols")
+  (res/register-resource :model-write :pre-path :model :system-file "zensols")
+  (res/register-resource :model-read :pre-path :model :system-file "zensols")
   (res/register-resource :analysis-report :system-file
                          (-> (System/getProperty "user.home")
                              (io/file "Desktop")
                              .getAbsolutePath)))
 
-(defn model-dir
-  "Return the model directory on the file system as defined by the
-  `:model-create` key.  See namespace documentation on how to configure."
-  []
-  (resource-path :model-create))
-
-(defn analysis-report-dir
+(defn analysis-report-resource
   "Return the model directory on the file system as defined by the
   `:analysis-report`.  See namespace documentation on how to configure."
   []
-  (resource-path :analysis-report))
+  (res/resource-path :analysis-report))
 
-(defn model-file
+(defn model-read-resource
   "Return a file pointing to model with `name`.
 
-  See [[model-dir]]."
+  See [[model-read-resource]]."
   [name]
-  (io/file (model-dir) (format "%s.dat" name)))
+  (res/resource-path :model-read (format "%s.dat" name)))
+
+(defn model-write-resource
+  "Return a file pointing to model with `name`.
+
+  See [[model-read-resource]]."
+  [name]
+  (res/resource-path :model-write (format "%s.dat" name)))
 
 (defn model-exists?
   "Return whether a the model exists with `name`.
 
-  See [[model-dir]]."
+  See [[model-read-resource]]."
   [name]
-  (let [file (model-file name)]
-    (.exists file)))
+  (.exists (model-read-resource name)))
 
 (defn read-model
   "Get a saved model (classifier and attributes used).
 
-  See [[model-dir]].
+  See [[model-read-resource]].
 
   Keys
   ----
   * **:fail-if-exist?** if `true` then throw an exception if the model file is
   missing"
   [name & {:keys [fail-if-exist?] :or {fail-if-exist? false}}]
-  (let [file (model-file name)
+  (let [file (model-read-resource name)
         exists? (.exists file)]
     (if (and fail-if-exist? (not exists?))
       (throw (ex-info (format "no model file found: %s" file)
@@ -156,9 +157,9 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
 (defn write-model
   "Get a saved model (classifier and attributes used).
 
-  See [[model-dir]]"
+  See [[model-read-resource]]"
   [name model]
-  (let [file (model-file name)]
+  (let [file (model-write-resource name)]
     (.mkdirs (.getParentFile file))
     (with-open [out (output-stream file)]
       (let [out-obj (java.io.ObjectOutputStream. out)]

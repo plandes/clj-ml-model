@@ -180,11 +180,11 @@ docs](https://github.com/plandes/clj-ml-model)."
   "Write all data from [[print-model-info]] to the file system.
 
   See [[zensols.model.classifier/modeldir]] for where the model is read from
-  and [[zensols.model.classifier/analysis-report-dir]] for information about to
+  and [[zensols.model.classifier/analysis-report-resource]] for information about to
   where the model information is written."
   [model]
   (let [model-conf (:model-conf model)
-        outfile (io/file (cl/analysis-report-dir)
+        outfile (io/file (cl/analysis-report-resource)
                          (format "%s-model.txt" (:name model-conf)))]
     (with-open [writer (io/writer outfile)]
       (binding [*out* writer]
@@ -198,7 +198,7 @@ docs](https://github.com/plandes/clj-ml-model)."
 
   * **model** a model created from [[zensols.model.eval-classifier/train-model]"
   [model]
-  (let [file (io/file (cl/analysis-report-dir)
+  (let [file (io/file (cl/analysis-report-resource)
                       (format "%s-classifier.dat" (:name model)))]
    (with-open [out (output-stream file)]
      (let [out-obj (java.io.ObjectOutputStream. out)]

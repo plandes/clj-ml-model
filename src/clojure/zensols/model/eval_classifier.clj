@@ -31,14 +31,14 @@ validation (see [[*two-pass-config*]])."
   []
   (let [model-conf (model-config)
         file-name (format "%s-data.arff" (:name model-conf))]
-    (cl/read-arff (io/file (cl/analysis-report-dir) file-name))))
+    (cl/read-arff (io/file (cl/analysis-report-resource) file-name))))
 
 (defn write-arff
   "Write the ARFF file configured with [[with-model-conf]]."
   []
   (let [model-conf (model-config)
         file-name (format "%s-data.arff" (:name model-conf))
-        file (io/file (cl/analysis-report-dir) file-name)]
+        file (io/file (cl/analysis-report-resource) file-name)]
     (binding [cl/*arff-file* file]
       (cl/write-arff (exc/cross-fold-instances)))
     file))
@@ -306,7 +306,7 @@ validation (see [[*two-pass-config*]])."
 (defn eval-and-write
   "Perform a cross validation and write the results to an Excel formatted file.
 
-  See [[zensols.model.classifier/analysis-report-dir]] for where the file is
+  See [[zensols.model.classifier/analysis-report-resource]] for where the file is
   written.
 
   * **classifier-sets** is a key in [[zensols.model.weka/*classifiers*]] or a
@@ -317,7 +317,7 @@ validation (see [[*two-pass-config*]])."
   [classifier-sets set-key]
   (letfn [(output-file [name]
             (let [model-conf (model-config)]
-              (io/file (cl/analysis-report-dir)
+              (io/file (cl/analysis-report-resource)
                        (format "%s-%s.xls" (:name model-conf) name))))]
     (let [output-file (output-file "classification")
           model-conf (model-config)]
@@ -363,7 +363,7 @@ validation (see [[*two-pass-config*]])."
   (let [{model-name :name} (model-config)]
     (->> res
          (map (fn [[classifier-name data]]
-                (let [out-file (io/file (cl/analysis-report-dir)
+                (let [out-file (io/file (cl/analysis-report-resource)
                                         (format "%s-%s-train-test-series.csv"
                                                 model-name classifier-name))]
                   (with-open [writer (io/writer out-file)]
