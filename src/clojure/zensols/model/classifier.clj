@@ -143,11 +143,12 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
   file is missing"
   [name & {:keys [fail-if-not-exists?] :or {fail-if-not-exists? true}}]
   (let [res (model-read-resource name)
-        exists? (and (instance? File res) (.exists res))]
-    (if (and fail-if-not-exists? (instance? File res) (not exists?))
+        file-res? (instance? File res)
+        exists? (and file-res? (.exists res))]
+    (if (and fail-if-not-exists? file-res? (not exists?))
       (throw (ex-info (format "no model file found: %s" res)
                       {:file res})))
-    (if-not exists?
+    (if (and file-res? (not exists?))
       (log/infof "no model resource found %s" res)
       (do
         (log/infof "reading model from %s" res)
