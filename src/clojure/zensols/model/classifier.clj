@@ -24,6 +24,7 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
   (:use [clj-excel.core :as excel])
   (:require [clojure.tools.logging :as log]
             [clojure.string :as str])
+  (:import [java.io File])
   (:import (zensols.weka NoCloneInstancesEvaluation))
   (:import (weka.classifiers Classifier Evaluation)
            (weka.filters.unsupervised.attribute Remove)
@@ -142,8 +143,8 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
   file is missing"
   [name & {:keys [fail-if-not-exists?] :or {fail-if-not-exists? true}}]
   (let [file (model-read-resource name)
-        exists? (.exists file)]
-    (if (and fail-if-not-exists? (not exists?))
+        exists? (and (instance? File) (.exists file))]
+    (if (and fail-if-not-exists? (instance? File) (not exists?))
       (throw (ex-info (format "no model file found: %s" file)
                       {:file file})))
     (if-not exists?
