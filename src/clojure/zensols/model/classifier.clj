@@ -295,6 +295,7 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
              (.getName (.getClass classifier))
              (str/join ", " attributes))
   (let [data (get-data)
+        _ (log/infof "cross validate on %d instances" (.numInstances data))
         {:keys [eval attribs train-total] :as cve}
         (cross-validate-evaluation classifier data attributes)]
     (merge (select-keys cve [train-total])
@@ -307,6 +308,7 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
              (.getName (.getClass classifier))
              (str/join ", " attributes))
   (let [raw-data (get-data)
+        _ (log/infof "training on %d instances" (.numInstances raw-data))
         train-data (filter-attribute-data raw-data attributes)]
     (.buildClassifier classifier train-data)
     classifier))
@@ -320,6 +322,7 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
   (let [train-data (filter-attribute-data train-data attributes)
         test-data (->> (filter-attribute-data test-data attributes)
                        weka/clone-instances)
+        _ (log/infof "testing on %d instances" (.numInstances test-data))
         eval (Evaluation. train-data)]
     (.evaluateModel eval classifier test-data zero-arg-arr)
     eval))
