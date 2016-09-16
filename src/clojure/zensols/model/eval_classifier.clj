@@ -42,34 +42,36 @@ validation (see [[*two-pass-config*]])."
   []
   (pprint (model-config)))
 
+(defn- analysis-file [file-format]
+  (let [model-conf (model-config)
+        file-name (format file-format (:name model-conf))]
+    (io/file (cl/analysis-report-resource) file-name)))
+
 (defn read-arff
   "Read the ARFF file configured with [[with-model-conf]]."
   []
-  (let [model-conf (model-config)
-        file-name (format "%s-data.arff" (:name model-conf))]
-    (cl/read-arff (io/file (cl/analysis-report-resource) file-name))))
+  (cl/read-arff (analysis-file "%s-data.arff")))
 
 (defn write-arff
   "Write the ARFF file configured with [[with-model-conf]]."
   []
-  (let [model-conf (model-config)
-        file-name (format "%s-data.arff" (:name model-conf))
-        file (io/file (cl/analysis-report-resource) file-name)]
+  (let [file (analysis-file "%s-data.arff")]
     (binding [cl/*arff-file* file]
       (cl/write-arff (by-set-type-instances :train-test)))
     file))
 
-(defn display-features
-  "Display features as configured in a model with [[with-model-conf]].
+(defn- result-matrix
+  "Helper function to generate a matrix of features as configured in a model
+  with [[with-model-conf]].
 
   For the non-zero-arg form, see [[with-model-conf]]."
   ([]
    (let [{:keys [feature-metas-fn display-feature-metas-fn
                  class-feature-meta-fn create-feature-sets-fn]} (model-config)
          display-feature-metas-fn (or display-feature-metas-fn feature-metas-fn)]
-     (display-features (display-feature-metas-fn)
-                       (class-feature-meta-fn)
-                       (create-feature-sets-fn))))
+     (result-matrix (display-feature-metas-fn)
+                    (class-feature-meta-fn)
+                    (create-feature-sets-fn))))
   ([feature-metas class-feature-meta feature-sets]
    (let [keys (map first (concat (list class-feature-meta) feature-metas))]
      (->> feature-sets
@@ -77,9 +79,30 @@ validation (see [[*two-pass-config*]])."
                  (map (fn [tkey]
                         (get tok tkey))
                       keys)))
-          ((fn [data]
-             (dr/display-results data
-                                 :column-names (map name keys))))))))
+          (hash-map :column-names (map name keys) :data)))))
+
+(defn display-features
+  "Display features as configured in a model with [[with-model-conf]].
+
+  For the non-zero-arg form, see [[with-model-conf]]."
+  []
+  (let [{:keys [column-names data]} (result-matrix)]
+    (dr/display-results data :column-names column-names)))
+
+(defn write-features
+  "Write features as configured in a model with [[with-model-conf]] to a CSV
+  spreadsheet file.
+
+  For the non-zero-arg form, see [[with-model-conf]]."
+  []
+  (let [file (analysis-file "%s-features.csv")
+        {:keys [column-names data]} (result-matrix)]
+    (with-open [writer (io/writer file)]
+      (->> data
+           (cons column-names)
+           (csv/write-csv writer)))
+    (log/infof "wrote features file: %s" file)
+    file))
 
 (defn- cross-validate-results-struct
   "Create a data structure with cross validation results."
