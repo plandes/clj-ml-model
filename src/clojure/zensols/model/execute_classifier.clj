@@ -12,6 +12,7 @@ docs](https://github.com/plandes/clj-ml-model)."
   (:use [clojure.pprint :only [pprint]])
   (:require [clojure.tools.logging :as log]
             [clojure.string :as str])
+  (:require [zensols.tabres.display-results :as dr])
   (:require [zensols.actioncli.resource :refer (resource-path)]
             [zensols.model.classifier :as cl]
             [zensols.model.weka :as weka]))
@@ -234,6 +235,29 @@ docs](https://github.com/plandes/clj-ml-model)."
                                      :attrib attrib}
                                 e)))))))))
 
+(defn- classify-features
+  "Classify a single instance using a trained model.
+
+  * **model** a model created
+  from [[zensols.model.eval-classifier/train-model]] or [[read-model]]"
+  [model features]
+  (log/debugf "classifying features: %s" features)
+  (with-model-conf (:model-conf model)
+    (let [{classifier :classifier
+           feature-metas :feature-metas} model
+          model-conf (model-config)
+          trans-fn (or (:classifications-map-fn model-conf) identity)
+          ;; must use copy constructor or it gives bad results
+          instances (weka/clone-instances (:instances model))
+          attribs (map name feature-metas)
+          return-keys (:model-return-keys model-conf)]
+      (log/tracef "instances: %s" (type instances))
+      (set-instance-values (.instance instances 0) features)
+      (->> (cl/classify-instance classifier instances return-keys)
+           first
+           (merge (if (contains? return-keys :features) {:features features}))
+           trans-fn))))
+
 (defn classify
   "Classify a single instance using a trained model.
 
@@ -242,26 +266,51 @@ docs](https://github.com/plandes/clj-ml-model)."
   [model & data]
   (log/debugf "classifying: %s" data)
   (with-model-conf (:model-conf model)
-    (let [{classifier :classifier
-           feature-metas :feature-metas
-           ;; this was the context that was persisted with the model
+    (let [{;; this was the context that was persisted with the model
            context :context} model
           _ (log/tracef "context: <%s>" context)
           model-conf (model-config)
-          trans-fn (or (:classifications-map-fn model-conf) identity)
           create-features-fn (or (:create-features-fn model-conf)
                                  (throw (ex-info "No create-features-fn defined in model"
                                                  {:model-name (:name model-conf)})))
           _ (log/debugf "create-features-fn: %s" create-features-fn)
           cfargs (concat data (list context))
           _ (log/debugf "arg count: %d" (count cfargs))
-          features (apply create-features-fn cfargs)
-          ;; must use copy constructor or it gives bad results
-          instances (weka/clone-instances (:instances model))
-          attribs (map name feature-metas)
-          return-keys (:model-return-keys model-conf)]
-      (set-instance-values (.instance instances 0) features)
-      (->> (cl/classify-instance classifier instances return-keys)
-           first
-           (merge (if (contains? return-keys :features) {:features features}))
-           trans-fn ))))
+          features (apply create-features-fn cfargs)]
+      (classify-features model features))))
+
+(defn predict
+  "Create predictions using the provided model.
+
+  Keys
+  ----
+  * **:set-type** the set to draw the test data, which defaults to `:test`"
+  [model & {:keys [set-type] :or {set-type :test}}]
+  (let [{:keys [feature-metas-fn display-feature-metas-fn
+                class-feature-meta-fn create-feature-sets-fn]} (model-config)
+        display-feature-metas-fn (or display-feature-metas-fn feature-metas-fn)
+        feature-metas (display-feature-metas-fn)
+        class-feature-meta (class-feature-meta-fn)
+        pred-keys [:pred-label :correct-label :correct? :confidence]
+        keys (concat pred-keys (map first feature-metas))]
+    (->> (create-feature-sets-fn :set-type :test)
+         (map (fn [anon]
+                (log/debugf "classifying: <%s>" anon)
+                (let [{:keys [label distributions]}
+                      (classify-features model anon)
+                      confidence (get distributions label)
+                      correct-label (get anon (first class-feature-meta))
+                      correct? (= correct-label label)
+                      anon (merge anon
+                                  (zipmap pred-keys
+                                          [label correct-label correct? confidence]))]
+                  (zipmap keys (map #(get anon %) keys)))))
+         (hash-map :columns keys :data))))
+
+(defn display-predictions [preds]
+ (let [{:keys [columns data]} preds
+       col-names (map name columns)]
+   (->> data
+        (map (fn [row]
+               (map #(get row %) columns)))
+        (#(dr/display-results % :column-names col-names)))))
