@@ -3,7 +3,6 @@
 # edit these if you want
 USER=		plandes
 #APP_NAME=	
-APP_BNAME=	nlparse
 #PROJ=		
 
 # shouldn't need to change anything below this point
