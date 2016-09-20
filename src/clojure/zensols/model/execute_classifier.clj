@@ -332,7 +332,7 @@ docs](https://github.com/plandes/clj-ml-model)."
                       (format "%s-predictions.xls" (:name model)))]
     (-> (excel/build-workbook
          (excel/workbook-hssf)
-         {(format ("%s Predictions" (str/capitalize (:name model))))
+         {(format "%s Predictions" (str/capitalize (:name model)))
           (->> data
                (map (fn [row]
                       (map #(get row %) columns)))
