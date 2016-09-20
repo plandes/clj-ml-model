@@ -16,6 +16,8 @@
 package com.zensols.weka;
 
 import clojure.lang.IFn;
+import clojure.java.api.Clojure;
+
 import weka.classifiers.Classifier;
 import weka.classifiers.Sourcable;
 import weka.core.Capabilities;
@@ -28,10 +30,12 @@ public class IFnClassifier
     extends Classifier 
     implements WeightedInstancesHandler, Sourcable {
 
-    private IFn func;
+    private String namespace;
+    private String funcName;
 
-    public IFnClassifier(IFn func) {
-	this.func = func;
+    public IFnClassifier(String namespace, String funcName) {
+	this.namespace = namespace;
+	this.funcName = funcName;
     }
 
     /**
@@ -68,10 +72,11 @@ public class IFnClassifier
     }
 
     public String toSource(String className) throws Exception {
-	return "class " + className + ": Clojure function: " + func;
+	return String.format("class %s: %s.%s", className, namespace, funcName);
     }
 
     public double classifyInstance(Instance instance) {
+	IFn func = Clojure.var(namespace, funcName);
 	Number ret = (Number)func.invoke(instance);
 	return ret.doubleValue();
     }
