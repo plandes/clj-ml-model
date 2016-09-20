@@ -85,6 +85,15 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
   validation (see [[cmpile-results]])."
   10)
 
+(def ^:dynamic *operation-write-instance-fns*
+  "A map with valus of functions that are called that return a `java.util.File`
+  for an operation represented by the respective key.  An ARFF file is created
+  at the file location.  The keys are one of:
+
+  * **:train-classifier** called when the classifier is training a model
+  * **:test-classifier** called when the classifier is testing a model"
+  nil)
+
 (defn initialize
   "Initialize model resource locations.
 
@@ -168,6 +177,21 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
         (.writeObject out-obj model)))
     (log/infof "saved model to %s" file)
     model))
+
+(defn read-arff
+  "Return a `weka.core.Instances` from an ARFF file."
+  [input-file]
+  (log/infof "reading ARFF file: %s" input-file)
+  (with-open [reader (io/reader input-file)]
+    (Instances. reader)))
+
+(defn write-arff
+  "Write a `weka.core.Instances` to an ARFF file and return that file."
+  [instances]
+  (log/infof "writing ARFF file: %s" *arff-file*)
+  (ConverterUtils$DataSink/write
+   (.getAbsolutePath *arff-file*) instances)
+  *arff-file*)
 
 (defn- create-classifier
   "Create a classifier instance."
@@ -309,7 +333,11 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
              (str/join ", " attributes))
   (let [raw-data (get-data)
         _ (log/infof "training on %d instances" (.numInstances raw-data))
-        train-data (filter-attribute-data raw-data attributes)]
+        train-data (filter-attribute-data raw-data attributes)
+        arff-file (get *operation-write-instance-fns* :train-classifier)]
+    (if arff-file
+      (binding [*arff-file* arff-file]
+        (write-arff train-data)))
     (.buildClassifier classifier train-data)
     classifier))
 
@@ -323,7 +351,11 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
         test-data (->> (filter-attribute-data test-data attributes)
                        weka/clone-instances)
         _ (log/infof "testing on %d instances" (.numInstances test-data))
-        eval (Evaluation. train-data)]
+        eval (Evaluation. train-data)
+        arff-file (get *operation-write-instance-fns* :test-classifier)]
+    (if arff-file
+      (binding [*arff-file* arff-file]
+        (write-arff test-data)))
     (.evaluateModel eval classifier test-data zero-arg-arr)
     eval))
 
@@ -379,20 +411,6 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
            {:label label-val
             :distributions dists}))
        (range (.numInstances unlabeled))))
-
-(defn read-arff
-  "Return a `weka.core.Instances` from an ARFF file."
-  [input-file]
-  (with-open [reader (io/reader input-file)]
-    (Instances. reader)))
-
-(defn write-arff
-  "Write a `weka.core.Instances` to an ARFF file and return that file."
-  [instances]
-  (log/infof "writing ARFF file: %s" *arff-file*)
-  (ConverterUtils$DataSink/write
-   (.getAbsolutePath *arff-file*) instances)
-  *arff-file*)
 
 (defn- sort-results [results]
   (sort #(compare (*best-result-criteria* %1)

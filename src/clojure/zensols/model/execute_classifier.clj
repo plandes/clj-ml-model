@@ -12,8 +12,10 @@ docs](https://github.com/plandes/clj-ml-model)."
   (:use [clojure.pprint :only [pprint]])
   (:require [clojure.tools.logging :as log]
             [clojure.string :as str])
+  (:require [clj-excel.core :as excel])
   (:require [zensols.tabres.display-results :as dr])
   (:require [zensols.actioncli.resource :refer (resource-path)]
+            [zensols.util.spreadsheet :as ss]
             [zensols.model.classifier :as cl]
             [zensols.model.weka :as weka]))
 
@@ -286,8 +288,9 @@ docs](https://github.com/plandes/clj-ml-model)."
   ----
   * **:set-type** the set to draw the test data, which defaults to `:test`"
   [model & {:keys [set-type] :or {set-type :test}}]
-  (let [{:keys [feature-metas-fn display-feature-metas-fn
-                class-feature-meta-fn create-feature-sets-fn]} (model-config)
+  (let [model-conf (:model-conf model)
+        {:keys [feature-metas-fn display-feature-metas-fn
+                class-feature-meta-fn create-feature-sets-fn]} model-conf
         display-feature-metas-fn (or display-feature-metas-fn feature-metas-fn)
         feature-metas (display-feature-metas-fn)
         class-feature-meta (class-feature-meta-fn)
@@ -305,12 +308,36 @@ docs](https://github.com/plandes/clj-ml-model)."
                                   (zipmap pred-keys
                                           [label correct-label correct? confidence]))]
                   (zipmap keys (map #(get anon %) keys)))))
-         (hash-map :columns keys :data))))
+         (hash-map :columns keys :model model :data))))
 
-(defn display-predictions [preds]
- (let [{:keys [columns data]} preds
-       col-names (map name columns)]
-   (->> data
-        (map (fn [row]
-               (map #(get row %) columns)))
-        (#(dr/display-results % :column-names col-names)))))
+(defn display-predictions
+  "Display **predictions** given by [[predict]]."
+  [predictions]
+  (let [{:keys [columns data]} predictions
+        col-names (map name columns)]
+    (->> data
+         (map (fn [row]
+                (map #(get row %) columns)))
+         (#(dr/display-results % :column-names col-names)))))
+
+(defn write-predictions
+  "Write **predictions** given by [[predict]] to the analysis directory.
+
+  See [[zensols.model.classifier/analysis-report-resource]] for information
+  about to where the spreadsheet is written."
+  [predictions]
+  (let [{:keys [columns data model]} predictions
+        col-names (map name columns)
+        file (io/file (cl/analysis-report-resource)
+                      (format "%s-predictions.xls" (:name model)))]
+    (-> (excel/build-workbook
+         (excel/workbook-hssf)
+         {(format ("%s Predictions" (str/capitalize (:name model))))
+          (->> data
+               (map (fn [row]
+                      (map #(get row %) columns)))
+               (cons col-names)
+               (ss/headerize))})
+        (ss/autosize-columns)
+        (excel/save file))
+    (log/infof "wrote predictions to %s" file)))

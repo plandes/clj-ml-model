@@ -25,6 +25,7 @@
                  ;;; reports
                  [outpace/clj-excel "0.0.2"]
                  [org.clojure/data.csv "0.1.2"]
+                 [com.zensols.tools/misc "0.0.3"]
 
                  ;; ML
                  [tw.edu.ntu.csie/libsvm "3.17"]
