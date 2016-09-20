@@ -15,26 +15,23 @@
  */
 package com.zensols.weka;
 
+import clojure.lang.IFn;
 import weka.classifiers.Classifier;
 import weka.classifiers.Sourcable;
 import weka.core.Capabilities;
+import weka.core.Capabilities.Capability;
 import weka.core.Instance;
 import weka.core.Instances;
 import weka.core.WeightedInstancesHandler;
-import weka.core.Capabilities.Capability;
 
-public class ConstantClassifier
+public class IFnClassifier
     extends Classifier 
     implements WeightedInstancesHandler, Sourcable {
 
-    private double constValue;
+    private IFn func;
 
-    public ConstantClassifier() {
-	this(0);
-    }
-
-    public ConstantClassifier(double constValue) {
-	this.constValue = constValue;
+    public IFnClassifier(IFn func) {
+	this.func = func;
     }
 
     /**
@@ -71,10 +68,11 @@ public class ConstantClassifier
     }
 
     public String toSource(String className) throws Exception {
-	return "class " + className + ": constant value: " + constValue;
+	return "class " + className + ": Clojure function: " + func;
     }
 
     public double classifyInstance(Instance instance) {
-	return constValue;
+	Number ret = (Number)func.invoke(instance);
+	return ret.doubleValue();
     }
 }
