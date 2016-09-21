@@ -3,7 +3,7 @@ for most uses.  Instead take a look at [[zensols.model.eval-classifier]]
 and [[zensols.model.execute-classifier]]."
       :author "Paul Landes"}
     zensols.model.weka
-  (:use [clojure.pprint :only [pprint]])
+  (:import [com.zensols.weka IFnClassifier])
   (:require [clojure.tools.logging :as log]
             [clojure.string :as str])
   (:import (weka.core Attribute Instance Instances FastVector))
@@ -451,3 +451,37 @@ and [[zensols.model.execute-classifier]]."
     (.setAttributeIndicesArray remove-filter (into-array Integer/TYPE indexes))
     (.setInputFormat remove-filter inst)
     (Filter/useFilter inst remove-filter)))
+
+(defmacro let-classifier
+  "fnspec ==> (classifier-name [insts] exprs)
+
+  Define a classifier that uses Clojure code to evaluate **insts** instances
+  and evaluate body **exprs**.
+
+  Example:
+```
+(let-classifier
+    (langid-baseline [inst]
+       (let [attrib (weka/attribute-by-name inst \"langid-1-id\")
+             val (.stringValue inst attrib)
+             rval (= \"en\" val)]
+         (log/infof \"langid: %s for: %s: res: %s\" val inst rval)
+         (if rval 1 0)))
+  (terse-results lang-baseline meta-set))
+```"
+  {:style/indent 1
+   :forms '[(let-classifier fnspecs* exprs*)]
+   :special-form true}
+  [fdef-expr & forms]
+  (let [sym- (first fdef-expr)
+        fdef- (rest fdef-expr)]
+    `(let [ns-sym# (gensym)]
+       (try
+         (let [ns# (create-ns ns-sym#)
+               fn-sym# (gensym)
+               fn-def# (fn ~@fdef-)]
+           (intern ns# fn-sym# fn-def#)
+           (let [res# (IFnClassifier. (pr-str ns-sym#) (pr-str fn-sym#))
+                 ~sym- res#]
+             ~@forms))
+         (finally (remove-ns ns-sym#))))))
