@@ -94,6 +94,11 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
   * **:test-classifier** called when the classifier is testing a model"
   nil)
 
+(def ^:dynamic excel-results-precision
+  "An integer specifying the length of the mantissa when creating the results
+  spreadsheet in [[excel-results]]."
+  3)
+
 (defn initialize
   "Initialize model resource locations.
 
@@ -451,9 +456,11 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
   (letfn [(create-sheet-data [results]
             (map (fn [result]
                    (letfn [(fp [key]
-                             (format "%.2f%%" (get result key)))
+                             (format (str "%." excel-results-precision "f%%")
+                                     (get result key)))
                            (f [key]
-                             (format "%.2f" (get result key)))]
+                             (format (str "%." excel-results-precision "f")
+                                     (get result key)))]
                      (vec (apply concat
                                  `(~(fp :accuracy)
                                    ~(f :wprecision)
