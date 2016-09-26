@@ -204,7 +204,10 @@ validation (see [[*two-pass-config*]])."
            (apply concat)
            doall))))
 
-(defn- run-tests [classifier-sets feature-set-key]
+(defn run-tests
+  "Create result sets useful to functions like [[eval-and-write]].  This
+  package was designed for most use cases to not have to use this function."
+  [classifier-sets feature-set-key]
   (let [test-fn (case *default-set-type*
                   :cross-validation cross-validate-results
                   :train-test train-test-results)
@@ -347,19 +350,21 @@ validation (see [[*two-pass-config*]])."
 
   * **feature-sets-key** identifies what feature set (see
   **:feature-sets-set** in [[with-model-conf]])"
-  [classifier-sets set-key]
-  (letfn [(output-file [name]
-            (let [model-conf (model-config)]
-              (io/file (cl/analysis-report-resource)
-                       (format "%s-%s.xls" (:name model-conf) name))))]
-    (let [output-file (output-file "classification")
-          model-conf (model-config)]
-      (cl/excel-results
-       [{:sheet-name (format "%s Classification" (str/capitalize (:name model-conf)))
-         :results (run-tests classifier-sets set-key)}]
-       output-file)
-      (log/infof "wrote results file: %s" output-file)
-      output-file)))
+  ([classifier-sets set-key]
+   (eval-and-write (run-tests classifier-sets set-key)))
+  ([results]
+   (letfn [(output-file [name]
+             (let [model-conf (model-config)]
+               (io/file (cl/analysis-report-resource)
+                        (format "%s-%s.xls" (:name model-conf) name))))]
+     (let [output-file (output-file "classification")
+           model-conf (model-config)]
+       (cl/excel-results
+        [{:sheet-name (format "%s Classification" (str/capitalize (:name model-conf)))
+          :results results}]
+        output-file)
+       (log/infof "wrote results file: %s" output-file)
+       output-file))))
 
 (defn train-test-series
   "Test and train with different rations and return the results.  The return
