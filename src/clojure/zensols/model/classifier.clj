@@ -448,7 +448,9 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
 (defn classifier-name
   "Return a decent human readable name of a classifier instance."
   [classifier-instance]
-  (second (re-matches #".*\.(.+)" (.getName (.getClass classifier-instance)))))
+  (if (string? classifier-instance)
+    classifier-instance
+    (second (re-matches #".*\.(.+)" (.getName (.getClass classifier-instance))))))
 
 (defn excel-results
   "Save the results in Excel format."
