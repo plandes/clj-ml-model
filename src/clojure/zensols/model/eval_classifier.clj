@@ -187,7 +187,7 @@ validation (see [[*two-pass-config*]])."
                                       feature-sets-key))
     (assert train-instances "train-instances")
     (assert test-instances "test-instances")
-    (log/debugf "number of train/test instances:(%d, %d), feature-metas: <%s>"
+    (log/infof "number of train/test instances:(%d, %d), feature-metas: <%s>"
                 (.numInstances train-instances)
                 (.numInstances test-instances)
                 (pr-str feature-meta-sets))
