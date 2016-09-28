@@ -208,7 +208,8 @@ docs](https://github.com/plandes/clj-ml-model)."
 (defn write-classifier
   "Serialize the model to the file system.
 
-  * **model** a model created from [[zensols.model.eval-classifier/train-model]"
+  * **model** a model created from
+  [[zensols.model.eval-classifier/train-model]]"
   [model]
   (let [file (io/file (cl/analysis-report-resource)
                       (format "%s-classifier.dat" (:name model)))]

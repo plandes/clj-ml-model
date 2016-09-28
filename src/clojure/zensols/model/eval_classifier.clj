@@ -187,10 +187,10 @@ validation (see [[*two-pass-config*]])."
                                       feature-sets-key))
     (assert train-instances "train-instances")
     (assert test-instances "test-instances")
-    (log/infof "number of train/test instances:(%d, %d), feature-metas: <%s>"
+    (log/infof "number of train/test instances:(%d, %d)"
                 (.numInstances train-instances)
-                (.numInstances test-instances)
-                (pr-str feature-meta-sets))
+                (.numInstances test-instances))
+    (log/debugf "feature metas: %s " (pr-str feature-meta-sets))
     (log/tracef "train instances class: %s"
                 (-> train-instances .getClass .getName))
     (log/tracef "test instances class: %s"
