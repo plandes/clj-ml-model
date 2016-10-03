@@ -30,7 +30,6 @@
                  ;; ML
                  [tw.edu.ntu.csie/libsvm "3.17"]
                  [nz.ac.waikato.cms.weka/weka-stable "3.6.13"]]
-  :profiles {:uberjar {:aot :all}
-             :dev
+  :profiles {:dev
              {:dependencies [[nz.ac.waikato.cms.weka/weka-stable "3.6.12" :classifier "sources"]
                              [com.zensols/clj-append "1.0.4"]]}})
