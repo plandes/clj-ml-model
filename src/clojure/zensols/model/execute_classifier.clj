@@ -93,6 +93,43 @@ docs](https://github.com/plandes/clj-ml-model)."
     (->> ((:feature-metas-fn model-conf))
          (into {}))))
 
+(def ^{:dynamic true :private true} combined-features nil)
+
+(defmacro with-combined-features
+  {:style/indent 0}
+  [& forms]
+  `(binding [combined-features (atom {})]
+     (do ~@forms)))
+
+(defn- combine-feature-vals
+  "Apply feature creation functions only where they don't already exist
+  in [[combined-features]]."
+  [fmap]
+  (let [cfeats @combined-features
+        fmap (->> fmap
+                  (map (fn [[fkey form]]
+                          (let [feats (or (and cfeats (get cfeats fkey))
+                                          ((eval form)))]
+                            {fkey feats})))
+                  (apply merge))]
+    (log/tracef "combined: %s" (pr-str @combined-features))
+    (swap! combined-features merge fmap)
+    (->> fmap vals (apply merge))))
+
+(defmacro combine-features
+  "Combine features from the forms for which features don't already exist in
+  **features**, which is a map with functions as keys and features already
+  created with that function as the value of the respective function."
+  [& forms]
+  `(->> (merge ~@(->> (map (fn [form]
+                             (->> form first
+                                  (ns-resolve (ns-name *ns*))
+                                  var-get
+                                  (#(hash-map % (read-string (str "#" (pr-str form)))))))
+                           forms)
+                      doall))
+        combine-feature-vals))
+
 (defn- create-instances
   "Create the weka Instances object using sets of features created from
   **:create-feature-sets-fn**.  If **context** is given call :set-context-fn.
@@ -277,7 +314,7 @@ docs](https://github.com/plandes/clj-ml-model)."
                                  (throw (ex-info "No create-features-fn defined in model"
                                                  {:model-name (:name model-conf)})))
           _ (log/debugf "create-features-fn: %s" create-features-fn)
-          cfargs (concat data (list context))
+          cfargs (concat data (if context (list :context context)))
           _ (log/debugf "arg count: %d" (count cfargs))
           features (apply create-features-fn cfargs)]
       (classify-features model features))))
