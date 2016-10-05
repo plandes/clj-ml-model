@@ -101,19 +101,20 @@ docs](https://github.com/plandes/clj-ml-model)."
   `(binding [combined-features (atom {})]
      (do ~@forms)))
 
-(defn- combine-feature-vals
+(defn combine-feature-vals
   "Apply feature creation functions only where they don't already exist
   in [[combined-features]]."
   [fmap]
-  (let [cfeats @combined-features
+  (let [cfeats (if combined-features @combined-features)
         fmap (->> fmap
                   (map (fn [[fkey form]]
                           (let [feats (or (and cfeats (get cfeats fkey))
                                           ((eval form)))]
                             {fkey feats})))
                   (apply merge))]
-    (log/tracef "combined: %s" (pr-str @combined-features))
-    (swap! combined-features merge fmap)
+    (when combined-features
+      (log/tracef "combined: %s" (pr-str @combined-features))
+      (swap! combined-features merge fmap))
     (->> fmap vals (apply merge))))
 
 (defmacro combine-features
