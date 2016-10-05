@@ -17,19 +17,20 @@
   :dependencies [[org.clojure/clojure "1.8.0"]
 
                  ;; command line
-                 [com.zensols.tools/actioncli "0.0.10"]
+                 [com.zensols.tools/actioncli "0.0.11"]
 
                  ;; dev
-                 [com.zensols.gui/tabres "0.0.5"]
+                 [com.zensols.gui/tabres "0.0.6"]
 
                  ;;; reports
                  [outpace/clj-excel "0.0.2"]
                  [org.clojure/data.csv "0.1.2"]
-                 [com.zensols.tools/misc "0.0.3"]
+                 [com.zensols.tools/misc "0.0.4"]
 
                  ;; ML
                  [tw.edu.ntu.csie/libsvm "3.17"]
                  [nz.ac.waikato.cms.weka/weka-stable "3.6.13"]]
-  :profiles {:dev
+  :profiles {:appassem {:aot :all}
+             :dev
              {:dependencies [[nz.ac.waikato.cms.weka/weka-stable "3.6.12" :classifier "sources"]
                              [com.zensols/clj-append "1.0.4"]]}})
