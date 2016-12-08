@@ -291,7 +291,9 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
     (letfn [(class-fn [data]
               classifier)
             (get-data []
-              (filter-attribute-data data attributes))]
+              (if attributes
+                (filter-attribute-data data attributes)
+                data))]
       (binding [*create-classifier-fn* class-fn
                 *get-data-fn* get-data]
         (cross-validate *cross-fold-count*)))))
@@ -322,13 +324,15 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
   [classifier attributes]
   (log/infof "cross validate tests with classifier %s on %s"
              (.getName (.getClass classifier))
-             (str/join ", " attributes))
+             (if attributes
+               (str/join ", " attributes)
+               "none"))
   (let [data (get-data)
         _ (log/infof "cross validate on %d instances" (.numInstances data))
         {:keys [eval attribs train-total] :as cve}
         (cross-validate-evaluation classifier data attributes)]
     (merge (select-keys cve [train-total])
-           (eval-to-results eval (or attribs attributes) classifier))))
+           (eval-to-results eval (or attribs attributes '("none")) classifier))))
 
 (defn train-classifier
   "Train **classifier** (`weka.classifiers.Classifier`)."

@@ -10,7 +10,7 @@ and [[zensols.model.execute-classifier]]."
   (:import (weka.core.converters ArffLoader ConverterUtils$DataSink))
   (:import (weka.classifiers Classifier Evaluation))
   (:import (weka.filters Filter))
-  (:import (weka.filters.unsupervised.attribute Remove)))
+  (:import (weka.filters.unsupervised.attribute Remove StringToWordVector)))
 
 (def ^:dynamic *classifiers*
   "An (incomplete) set of Weka classifiers keyed by their speed, type or
@@ -26,7 +26,7 @@ and [[zensols.model.execute-classifier]]."
   The singleton classifiers is a list like the others but have only a single
   element of the class.  They include: `zeror`, `svm`, `j48`, `random-forest`,
   `naivebays`, `logit`, `logitboost`, `smo`, `kstar`."
- {:fast '("weka.classifiers.trees.J48"
+  {:fast '("weka.classifiers.trees.J48"
            "weka.classifiers.rules.ZeroR"
            "weka.classifiers.bayes.NaiveBayes"
            "weka.classifiers.rules.Ridor"
@@ -485,3 +485,11 @@ and [[zensols.model.execute-classifier]]."
                  ~sym- res#]
              ~@forms))
          (finally (remove-ns ns-sym#))))))
+
+(defn word-count-instances
+  "Create an instances "
+  [inst]
+  (Filter/useFilter inst
+                    (doto (StringToWordVector.)
+                      (.setInputFormat inst)
+                      (.setOutputWordCounts true))))
