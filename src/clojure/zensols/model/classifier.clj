@@ -263,25 +263,27 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
   "Create a filtered data set (`weka.core.Instances`) from unfiltered Instances.
   Paramater **attributes** is a set of string attribute names."
   [unfiltered attributes]
-  (log/debugf "attributes: %s, insts: %s"
-              (str/join ", " attributes)
-              (type unfiltered))
-  (let [filter (Remove.)]
-    (letfn [(attrib-by-name [aname]
-              (or (.attribute unfiltered aname)
-                  (throw (ex-info (str "Unknown attribute: " aname)
-                                  {:name aname}))))]
-      (.setInvertSelection filter true)
-      (.setAttributeIndicesArray
-       filter
-       (int-array
-        (map #(.index (attrib-by-name %))
-             (concat (if *class-feature-meta* [*class-feature-meta*])
-                     attributes))))
-      (.setInputFormat filter unfiltered)
-      (let [data (Filter/useFilter unfiltered filter)]
-        (set-classify-attrib data)
-        data))))
+  (if-not attributes
+    unfiltered
+    (let [filter (Remove.)]
+      (log/debugf "attributes: %s, insts: %s"
+                  (str/join ", " attributes)
+                  (type unfiltered))
+      (letfn [(attrib-by-name [aname]
+                (or (.attribute unfiltered aname)
+                    (throw (ex-info (str "Unknown attribute: " aname)
+                                    {:name aname}))))]
+        (.setInvertSelection filter true)
+        (.setAttributeIndicesArray
+         filter
+         (int-array
+          (map #(.index (attrib-by-name %))
+               (concat (if *class-feature-meta* [*class-feature-meta*])
+                       attributes))))
+        (.setInputFormat filter unfiltered)
+        (let [data (Filter/useFilter unfiltered filter)]
+          (set-classify-attrib data)
+          data)))))
 
 (defn- cross-validate-evaluation
   "Perform a cross validation using **classifier** on **data** Instances.
@@ -291,9 +293,7 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
     (letfn [(class-fn [data]
               classifier)
             (get-data []
-              (if attributes
-                (filter-attribute-data data attributes)
-                data))]
+              (filter-attribute-data data attributes))]
       (binding [*create-classifier-fn* class-fn
                 *get-data-fn* get-data]
         (cross-validate *cross-fold-count*)))))
@@ -339,7 +339,9 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
   [classifier attributes]
   (log/infof "training classifer %s on %s"
              (.getName (.getClass classifier))
-             (str/join ", " attributes))
+             (if attributes
+               (str/join ", " attributes)
+               "none"))
   (let [raw-data (get-data)
         _ (log/infof "training on %d instances" (.numInstances raw-data))
         train-data (filter-attribute-data raw-data attributes)

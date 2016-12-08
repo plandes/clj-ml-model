@@ -418,16 +418,21 @@ and [[zensols.model.execute-classifier]]."
 
   * **class-feature-meta** just like a (single) **feature-metas** but describes
   the class"
-  [inst-name feature-sets feature-metas class-feature-meta]
-  (log/debugf "create %d instances" (count feature-sets))
-  (let [missing-noms (find-missing-nominals feature-sets feature-metas)]
-    (if (and (not *missing-values-ok*)
-             (not (empty? missing-noms)))
-      (throw (ex-info "Missing nominal (only first reported)"
-                      (first missing-noms)))))
-  (let [inst (create-instances inst-name feature-sets
-                               feature-metas class-feature-meta true)]
-    (clone-instances inst)))
+  ([inst-name feature-sets feature-metas]
+   (instances inst-name feature-sets feature-metas nil))
+  ([inst-name feature-sets feature-metas class-feature-meta]
+   (log/debugf "create %d instances" (count feature-sets))
+   (let [missing-noms (find-missing-nominals feature-sets feature-metas)]
+     (if (and (not *missing-values-ok*)
+              (not (empty? missing-noms)))
+       (throw (ex-info "Missing nominal (only first reported)"
+                       (first missing-noms)))))
+   (let [inst (if class-feature-meta
+                (create-instances inst-name feature-sets
+                                  feature-metas class-feature-meta true)
+                (create-instances inst-name feature-sets
+                                  feature-metas nil false))]
+     (clone-instances inst))))
 
 (defn- index-for-attribute
   "Return an `weka.core.Attribute` in **inst** (`weka.core.Instances`)
@@ -488,8 +493,11 @@ and [[zensols.model.execute-classifier]]."
 
 (defn word-count-instances
   "Create an instances "
-  [inst]
+  [inst & {:keys [word-count lower-case]
+           :or {word-count true
+                lower-case false}}]
   (Filter/useFilter inst
                     (doto (StringToWordVector.)
                       (.setInputFormat inst)
-                      (.setOutputWordCounts true))))
+                      (.setOutputWordCounts word-count)
+                      (.setLowerCaseTokens lower-case))))
