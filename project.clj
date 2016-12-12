@@ -14,11 +14,12 @@
   :java-source-paths ["src/java"]
   :javac-options ["-Xlint:unchecked"]
   :exclusions [org.slf4j/slf4j-log4j12
+               log4j/log4j
                ch.qos.logback/logback-classic]
   :dependencies [[org.clojure/clojure "1.8.0"]
 
                  ;; command line
-                 [com.zensols.tools/actioncli "0.0.11"]
+                 [com.zensols.tools/actioncli "0.0.12"]
 
                  ;; dev
                  [com.zensols.gui/tabres "0.0.6"]
@@ -34,4 +35,4 @@
   :profiles {:appassem {:aot :all}
              :dev
              {:dependencies [[nz.ac.waikato.cms.weka/weka-stable "3.6.12" :classifier "sources"]
-                             [com.zensols/clj-append "1.0.4"]]}})
+                             [com.zensols/clj-append "1.0.5"]]}})
