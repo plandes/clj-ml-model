@@ -13,9 +13,6 @@
   :source-paths ["src/clojure"]
   :java-source-paths ["src/java"]
   :javac-options ["-Xlint:unchecked"]
-  :exclusions [org.slf4j/slf4j-log4j12
-               log4j/log4j
-               ch.qos.logback/logback-classic]
   :dependencies [[org.clojure/clojure "1.8.0"]
 
                  ;; command line
@@ -34,5 +31,5 @@
                  [nz.ac.waikato.cms.weka/weka-stable "3.6.13"]]
   :profiles {:appassem {:aot :all}
              :dev
-             {:dependencies [[nz.ac.waikato.cms.weka/weka-stable "3.6.12" :classifier "sources"]
+             {:dependencies [[nz.ac.waikato.cms.weka/weka-stable "3.6.13" :classifier "sources"]
                              [com.zensols/clj-append "1.0.5"]]}})
