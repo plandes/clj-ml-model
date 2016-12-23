@@ -1,7 +1,7 @@
 Interface for Machine Learning Modeling, Testing and Training
 =============================================================
 
-This library provides generalized library to train, test and use machine
+This repository provides generalized library to train, test and use machine
 learning models.  Specifically it:
 * Wraps [Weka](http://www.cs.waikato.ac.nz/ml/weka/).
 * Automation of any combination of classifiers and features.
