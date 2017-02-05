@@ -97,7 +97,7 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
 (def ^:dynamic excel-results-precision
   "An integer specifying the length of the mantissa when creating the results
   spreadsheet in [[excel-results]]."
-  3)
+  5)
 
 (defn initialize
   "Initialize model resource locations.
