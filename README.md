@@ -1,5 +1,9 @@
-Interface for Machine Learning Modeling, Testing and Training
-=============================================================
+# Interface for Machine Learning Modeling, Testing and Training
+
+[![Travis CI Build Status][travis-badge]][travis-link]
+
+  [travis-link]: https://travis-ci.org/plandes/clj-ml-model
+  [travis-badge]: https://travis-ci.org/plandes/clj-ml-model.svg?branch=master
 
 This repository provides generalized library to train, test and use machine
 learning models.  Specifically it:
@@ -9,25 +13,28 @@ learning models.  Specifically it:
 * Generate Excel spreadsheet files of multiple run results.
 * Two pass cross validation.
 
-Obtaining
----------
+## Obtaining
+
 In your `project.clj` file, add:
 
 [![Clojars Project](https://clojars.org/com.zensols.ml/model/latest-version.svg)](https://clojars.org/com.zensols.ml/model/)
 
-Documentation
--------------
+
+## Documentation
+
 Additional [documentation](https://plandes.github.io/clj-ml-model/codox/index.html).
 
-Example
--------
+
+## Example
+
 See the [example repo](https://github.com/plandes/clj-example-nlp-ml) that
 illustrates how to use this library and contains the code from where these
 examples originate.  It's highly recommended to clone it and follow along as
 you peruse this README.
 
-Usage
------
+
+## Usage
+
 To create, validate, test and utilize a model you must do the following:
 
 1. [Create the Corpus](#create-the-corpus)
@@ -43,7 +50,9 @@ Note that this example (like `clj-ml-dataset`) uses natural language processing
 but the library was written to be general purpose and other non-NLP projects
 can use it.
 
+
 ### Create the Corpus
+
 Before we can do anything, we need a annotated corpus since we'll be using
 supervised learning methods.  To do that, use the
 [machine learning dataset library](https://github.com/plandes/clj-ml-dataset)
@@ -51,7 +60,9 @@ to pre-parse all utterances in the annotated corpus (follow the readme and
 create `zensols.example.anon-db` namesapce).  You'll also need to start a
 Docker instance for the Elasticsearch server as detailed in the docs.
 
+
 ### Create Features
+
 First we have to generate the features that will be used in our model and train
 our classifier.  We'll generate our features from details that are parsed from
 English utterances for our example so we'll use the
@@ -98,7 +109,9 @@ those features from the pre-parsed utterances stored in Elasticsearch using the
 In this example we call `adb/anons` to return the parsed corpus data (see the
 annotation library documentation for how to generate the corpus cache).
 
+
 ### Create the Model Configuration
+
 Next we create the model configuration (not the model yet).  The configuration
 gives the framework what needs to create the feature set to generate an
 [weka.core.Instances](http://weka.sourceforge.net/doc.dev/weka/core/Instances.html) used
@@ -117,7 +130,9 @@ by Weka to create, test and utilize the model.
 The model configuration is a map that refers to functions we already created
 and some other metadata.
 
+
 ### Create the Model
+
 Next we define our features and classifiers.
 
 After the namesapce declaration we define `feature-sets-set`, which is a
@@ -174,7 +189,9 @@ feature metadata sets.
           :feature-sets-set (feature-sets-set)}))
 ```
 
+
 ### Evaluating the Model
+
 While this step isn't necessary, you'll want to do it to see how well the model
 performs and optimize it by changing the feature set or swapping and/or
 tweaking the classifier.
@@ -182,7 +199,9 @@ tweaking the classifier.
 Technically speaking, the actual in memory model is not yet created, but we
 have now set up everything the framework needs to use it.
 
+
 #### Creating an ARFF File
+
 Let's start by writing out an
 [ARFF](http://www.cs.waikato.ac.nz/ml/weka/arff.html) file:
 ```clojure
@@ -190,7 +209,9 @@ Let's start by writing out an
   (ec/write-arff))
 ```
 
+
 #### Cross Validation
+
 Note that we have we need to wrap everything in a `with-model-conf`, which is
 the way the framework receives our model configuration.  In practice you'll
 wrap more than just one statement and do several things in the lexical context
@@ -217,6 +238,7 @@ for more information on classifier genres.
 
 
 #### Cross Validation Report
+
 You might have a large dataset and choose to use classifiers that take a long
 time to train.  This is all multiplied by feature metadata set cardinally,
 which drastically compoundes the run time.  In these situations you might want
@@ -227,6 +249,7 @@ classifiers :huge-meta-set)) ```
 
 
 ### Persist/Save the Model
+
 Once you're happy with the performance of your model you can save it and use it
 in the same or different JVM instance.
 ```clojure
@@ -248,6 +271,7 @@ The information encoded in this file includes:
 
 
 ### Use the Model
+
 First let's create a namespace to work with our new model and a function to
 create that model:
 ```clojure
@@ -335,6 +359,7 @@ Now we can create a client friendly (to our new library) function:
        (exc/classify (model) anon)
        :label))
 ```
+
 
 ### Test the Model
 
@@ -500,20 +525,32 @@ decision tree for this example) learns quickly.  However we see the first drop
 at 120 training instances (the red portion), which is mentioned *elbow* where
 we typically see the classifier start to overtrain.
 
-Building
---------
-All [leiningen](http://leiningen.org) tasks will work in this project.  For
-additional build functionality (git tag convenience utility functionality)
-clone the [Clojure build repo](https://github.com/plandes/clj-zenbuild) in the
-same (parent of this file) directory as this project:
-```bash
-   cd ..
-   git clone https://github.com/plandes/clj-zenbuild
-```
 
-License
---------
-Copyright © 2016 Paul Landes
+## Building
+
+To build from source, do the folling:
+
+- Install [Leiningen](http://leiningen.org) (this is just a script)
+- Install [GNU make](https://www.gnu.org/software/make/)
+- Install [Git](https://git-scm.com)
+- Download the source: `git clone https://github.com/clj-mkproj && cd clj-mkproj`
+- Download the make include files:
+```bash
+mkdir ../clj-zenbuild && wget -O - https://api.github.com/repos/plandes/clj-zenbuild/tarball | tar zxfv - -C ../clj-zenbuild --strip-components 1
+```
+- Build the distribution binaries: `make dist`
+
+Note that you can also build a single jar file with all the dependencies with: `make uber`
+
+
+## Changelog
+
+An extensive changelog is available [here](CHANGELOG.md).
+
+
+## License
+
+Copyright © 2016 - 2017 Paul Landes
 
 Apache License version 2.0
 
