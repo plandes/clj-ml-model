@@ -214,6 +214,55 @@ and [[zensols.model.execute-classifier]]."
        :attrib-count attrib-count
        :label-attrib label-attrib})))
 
+(defn sparse-instances
+  "Create a sparse `core.weka.Instance` using a sequence of maps (`map`).
+  The keys of the maps are the class with the values maps each with the key as
+  the index and the value the weight.  The `dim` parameter is the dimension of
+  each instance.
+
+  Keys
+  ----
+  * **:pattern** a [[format]] using one integer as the index (default: `f%d`)
+  * **:class-attribute** the name of the output class (values are given from the keys of `maps`)
+  * **instance-name** the name of the `Instance` created object and defaults to `inst`
+  * **:add-class?** if `true` add the class that comes from the key in **maps**
+  * **default-value** if a double replace missing values not in th emap with
+  this value, otherwise missing values will be used"
+  [maps dim & {:keys [pattern class-attribute-name instance-name
+                      add-class? default-value]
+               :or {pattern "f%d"
+                    class-attribute-name "class"
+                    instance-name "inst"
+                    add-class? true}}]
+  (let [labels (-> maps keys)
+        label-map (zipmap labels (range (count labels)))
+        label-attrib (classifier-label-attrib [class-attribute-name labels])
+        attrib-vec (FastVector. (inc dim))
+        def-array (if default-value
+                    (into-array Double/TYPE (repeat (inc dim) default-value)))]
+    (->> (range dim)
+         (map #(format pattern %))
+         (map #(create-attrib % 'numeric))
+         (map #(.addElement attrib-vec %))
+         doall)
+    (.addElement attrib-vec label-attrib)
+    (let [insts (Instances. instance-name attrib-vec 0)]
+      (->> maps
+           (map (fn [[name weights]]
+                  (let [inst (weka.core.Instance. (inc dim))]
+                    (->> weights
+                         (map (fn [[idx weight]]
+                                (.setValueSparse inst idx weight)))
+                         doall)
+                    (if add-class?
+                     (.setValueSparse inst (.index label-attrib) (label-map name)))
+                    (if def-array
+                      (.replaceMissingValues inst def-array))
+                    (.add insts inst)
+                    (.setClassIndex insts (.index label-attrib)))))
+           doall)
+      insts)))
+
 (defn- populate-instance
   "Populate an `Instance` with data from a map for a set of attributes.
 
@@ -490,14 +539,3 @@ and [[zensols.model.execute-classifier]]."
                  ~sym- res#]
              ~@forms))
          (finally (remove-ns ns-sym#))))))
-
-(defn word-count-instances
-  "Create an instances "
-  [inst & {:keys [word-count lower-case]
-           :or {word-count true
-                lower-case false}}]
-  (Filter/useFilter inst
-                    (doto (StringToWordVector.)
-                      (.setInputFormat inst)
-                      (.setOutputWordCounts word-count)
-                      (.setLowerCaseTokens lower-case))))
