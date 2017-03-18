@@ -489,7 +489,9 @@ and [[zensols.model.execute-classifier]]."
   (let [res (clone-instances src)]
     (->> (.enumerateInstances dst)
          enumeration-seq
-         (map #(.add res %)))))
+         (map #(.add res %))
+         doall)
+    res))
 
 (defn- index-for-attribute
   "Return an `weka.core.Attribute` in **inst** (`weka.core.Instances`)
