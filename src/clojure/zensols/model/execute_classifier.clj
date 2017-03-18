@@ -101,7 +101,7 @@ docs](https://github.com/plandes/clj-ml-model)."
   ([features-set]
    (create-instances features-set nil))
   ([features-set context]
-   (log/infof "generated instances from %d feature sets" (count features-set))
+   (log/infof "generating instances from %d feature sets" (count features-set))
    (log/tracef "feature sets: <<%s>>" (pr-str features-set))
    (let [{:keys [name set-context-fn]} (model-config)]
      (if (and set-context-fn context)
@@ -116,7 +116,7 @@ docs](https://github.com/plandes/clj-ml-model)."
   "Called by [[eval-classifier]] to create the data set for cross validation.
   See [[create-instances]]."
   []
-  (log/info "generating feature sets from model config")
+  (log/info "generating cross fold feature sets from model config")
   (let [{:keys [cross-fold-instances-inst create-feature-sets-fn]} (model-config)]
     (assert cross-fold-instances-inst
             "No :cross-fold-instances-inst atom set on model configuration")
@@ -127,7 +127,7 @@ docs](https://github.com/plandes/clj-ml-model)."
   "Called by [[eval-classifier]] to create the data set for cross validation.
   See [[create-instances]]."
   []
-  (log/info "generating feature sets from model config")
+  (log/info "generating test/train feature sets from model config")
   (let [{:keys [train-test-instances-inst create-feature-sets-fn]} (model-config)]
     (assert train-test-instances-inst
             "No :instances-inst atom set on model configuration")
@@ -136,10 +136,14 @@ docs](https://github.com/plandes/clj-ml-model)."
              (if data
                data
                (let [train-sets (create-feature-sets-fn :set-type :train)
-                     test-sets (create-feature-sets-fn :set-type :test)]
-                 {:train (create-instances train-sets)
-                  :test (create-instances test-sets)
-                  :train-test (create-instances (concat train-sets test-sets))}))))))
+                     test-sets (create-feature-sets-fn :set-type :test)
+                     train (create-instances train-sets)
+                     _ (log/debugf "train instances created: %d" (.numInstances train))
+                     test (create-instances test-sets)
+                     _ (log/debugf "test instances created: %d" (.numInstances test))]
+                 {:train train
+                  :test test
+                  :train-test (weka/append-instances train test)}))))))
 
 (defn model-exists?
   "Return whether a model file exists on the file system."

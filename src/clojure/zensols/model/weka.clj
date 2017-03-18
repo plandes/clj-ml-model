@@ -354,6 +354,14 @@ and [[zensols.model.execute-classifier]]."
           (.add insts inst))))
     insts))
 
+(defn append-instances
+  "Merge two instances row wise by adding dst to src."
+  [src dst]
+  (let [res (clone-instances src)]
+    (->> (.enumerateInstances dst)
+         enumeration-seq
+         (map #(.add res %)))))
+
 (defn map-merge-instances
   "Merges two sets of Instances together. The resulting set will have all the
   attributes of the first set plus all the attributes of the second set.
