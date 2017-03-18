@@ -206,7 +206,7 @@ docs](https://github.com/plandes/clj-ml-model)."
     outfile))
 
 (defn write-classifier
-  "Serialize the model to the file system.
+  "Serialize (just) the classifier to the file system.
 
   * **model** a model created from
   [[zensols.model.eval-classifier/train-model]]"

@@ -442,7 +442,7 @@ validation (see [[*two-pass-config*]])."
 
   * **:id-key** a function that takes a key as input and returns a feature set
 
-  * **:feature-metas-fn the same function as described
+  * **:feature-metas-fn** the same function as described
   in [[zensols.model.execute-classifier/with-model-conf]]
 
   * **:create-features-fn** the same function as descrbed
