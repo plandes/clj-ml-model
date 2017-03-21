@@ -243,8 +243,6 @@ docs](https://github.com/plandes/clj-ml-model)."
                                      :attrib attrib}
                                 e)))))))))
 
-(-> @x second)
-
 (defn- classify-features
   "Classify a single instance using a trained model.
 
@@ -263,7 +261,6 @@ docs](https://github.com/plandes/clj-ml-model)."
           return-keys (:model-return-keys model-conf)]
       (log/tracef "instances: %s" (type instances))
       (set-instance-values (.instance instances 0) features)
-      (reset! x [instances features])
       (->> (cl/classify-instance classifier instances return-keys)
            first
            (merge (if (contains? return-keys :features) {:features features}))
