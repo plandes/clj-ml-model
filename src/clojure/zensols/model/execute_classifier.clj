@@ -36,9 +36,10 @@ docs](https://github.com/plandes/clj-ml-model)."
 
   * **:create-features-fn** just like **create-feature-sets-fn** but creates a
   single feature map used for test/execution after the classifier is built;
-  it's called with the arguments that [[classify]] is given to classify ann
+  it's called with the arguments that [[classify]] is given to classify an
   instance along with the context generated at train time by **:context-fn** if
-  it was provided (see below)
+  it was provided (see below)--therefore you must provide a two argument
+  function if a context is provided at train time
 
   * **:feature-metas-fn** a function that creates a map of key/value
   pairs describing the features where the values are `string`, `boolean`,
@@ -242,6 +243,8 @@ docs](https://github.com/plandes/clj-ml-model)."
                                      :attrib attrib}
                                 e)))))))))
 
+(-> @x second)
+
 (defn- classify-features
   "Classify a single instance using a trained model.
 
@@ -260,6 +263,7 @@ docs](https://github.com/plandes/clj-ml-model)."
           return-keys (:model-return-keys model-conf)]
       (log/tracef "instances: %s" (type instances))
       (set-instance-values (.instance instances 0) features)
+      (reset! x [instances features])
       (->> (cl/classify-instance classifier instances return-keys)
            first
            (merge (if (contains? return-keys :features) {:features features}))
@@ -281,7 +285,7 @@ docs](https://github.com/plandes/clj-ml-model)."
                                  (throw (ex-info "No create-features-fn defined in model"
                                                  {:model-name (:name model-conf)})))
           _ (log/debugf "create-features-fn: %s" create-features-fn)
-          cfargs (concat data (if context (list :context context)))
+          cfargs (concat data (if context (list context)))
           _ (log/debugf "arg count: %d" (count cfargs))
           features (apply create-features-fn cfargs)]
       (classify-features model features))))
@@ -292,7 +296,8 @@ docs](https://github.com/plandes/clj-ml-model)."
   Keys
   ----
   * **:set-type** the set to draw the test data, which defaults to `:test`"
-  [model & {:keys [set-type] :or {set-type :test}}]
+  [model & {:keys [set-type feature-sets]
+            :or {set-type :test}}]
   (let [model-conf (:model-conf model)
         {:keys [feature-metas-fn display-feature-metas-fn
                 class-feature-meta-fn create-feature-sets-fn]} model-conf
@@ -300,14 +305,22 @@ docs](https://github.com/plandes/clj-ml-model)."
         feature-metas (display-feature-metas-fn)
         class-feature-meta (class-feature-meta-fn)
         pred-keys [:pred-label :correct-label :correct? :confidence]
-        keys (concat pred-keys (map first feature-metas))]
-    (->> (create-feature-sets-fn :set-type :test)
+        keys (concat pred-keys (map first feature-metas))
+        feature-sets (if feature-sets
+                      (let [{:keys [create-features-fn]} model-conf
+                            {:keys [context]} model]
+                        (->> feature-sets
+                             (map #(create-features-fn % context))
+                             doall)))]
+    (->> (or feature-sets
+             (create-feature-sets-fn :set-type :test))
          (map (fn [anon]
                 (log/debugf "classifying: <%s>" anon)
                 (let [{:keys [label distributions]}
                       (classify-features model anon)
                       confidence (get distributions label)
-                      correct-label (get anon (first class-feature-meta))
+                      correct-label (or (get anon (first class-feature-meta))
+                                        "<no class label>")
                       correct? (= correct-label label)
                       anon (merge anon
                                   (zipmap pred-keys
