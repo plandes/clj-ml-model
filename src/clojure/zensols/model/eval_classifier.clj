@@ -49,16 +49,19 @@ validation (see [[*two-pass-config*]])."
 
 (defn read-arff
   "Read the ARFF file configured with [[with-model-conf]]."
-  []
-  (cl/read-arff (analysis-file "%s-data.arff")))
+  ([]
+   (read-arff (analysis-file "%s-data.arff")))
+  ([file]
+   (cl/read-arff file)))
 
 (defn write-arff
   "Write the ARFF file configured with [[with-model-conf]]."
-  []
-  (let [file (analysis-file "%s-data.arff")]
-    (binding [cl/*arff-file* file]
-      (cl/write-arff (by-set-type-instances :train-test)))
-    file))
+  ([]
+   (write-arff (analysis-file "%s-data.arff")))
+  ([file]
+   (binding [cl/*arff-file* file]
+     (cl/write-arff (by-set-type-instances :train-test)))
+   file))
 
 (defn- result-matrix
   "Helper function to generate a matrix of features as configured in a model

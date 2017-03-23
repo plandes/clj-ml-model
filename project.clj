@@ -30,6 +30,7 @@
                  [tw.edu.ntu.csie/libsvm "3.17"]
                  [nz.ac.waikato.cms.weka/weka-stable "3.6.13"]]
   :profiles {:appassem {:aot :all}
+             :snapshot {:git-version {:version-cmd "echo -snapshot"}}
              :dev
              {:jvm-opts
               ["-Dlog4j.configurationFile=test-resources/log4j2.xml" "-Xms4g" "-Xmx12g" "-XX:+UseConcMarkSweepGC"]
