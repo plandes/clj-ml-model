@@ -42,22 +42,25 @@ validation (see [[*two-pass-config*]])."
   []
   (pprint (model-config)))
 
-(defn- analysis-file [file-format]
-  (let [model-conf (model-config)
-        file-name (format file-format (:name model-conf))]
-    (io/file (cl/analysis-report-resource) file-name)))
+(defn analysis-file
+  ([]
+   (analysis-file "%s-data.arff"))
+  ([file-format]
+   (let [model-conf (model-config)
+         file-name (format file-format (:name model-conf))]
+     (io/file (cl/analysis-report-resource) file-name))))
 
 (defn read-arff
   "Read the ARFF file configured with [[with-model-conf]]."
   ([]
-   (read-arff (analysis-file "%s-data.arff")))
+   (read-arff (analysis-file)))
   ([file]
    (cl/read-arff file)))
 
 (defn write-arff
   "Write the ARFF file configured with [[with-model-conf]]."
   ([]
-   (write-arff (analysis-file "%s-data.arff")))
+   (write-arff (analysis-file)))
   ([file]
    (binding [cl/*arff-file* file]
      (cl/write-arff (by-set-type-instances :train-test)))
@@ -342,6 +345,32 @@ validation (see [[*two-pass-config*]])."
   []
   (cl/read-model (model-persist-name)))
 
+(defn evaluations-file
+  "Return the default file used to create an evaluations file
+  with [[eval-and-write]]."
+  ([]
+   (evaluations-file "classification"))
+  ([fname]
+   (let [model-conf (model-config)]
+     (io/file (cl/analysis-report-resource)
+              (format "%s-%s.xls" (:name model-conf) fname)))))
+
+(defn eval-and-write-results
+  "Perform a cross validation and write the results to an Excel formatted file.
+  The data from **results** is obtained with [[run-tests]].
+
+  See [[eval-and-write]]"
+  ([results]
+   (eval-and-write-results results (evaluations-file)))
+  ([results output-file]
+   (let [model-conf (model-config)]
+     (cl/excel-results
+      [{:sheet-name (format "%s Classification" (str/capitalize (:name model-conf)))
+        :results results}]
+      output-file)
+     (log/infof "wrote results file: %s" output-file)
+     output-file)))
+
 (defn eval-and-write
   "Perform a cross validation and write the results to an Excel formatted file.
 
@@ -352,22 +381,15 @@ validation (see [[*two-pass-config*]])."
   constructed classifier (see [[zensols.model.weka/make-classifiers]])
 
   * **feature-sets-key** identifies what feature set (see
-  **:feature-sets-set** in [[with-model-conf]])"
+  **:feature-sets-set** in [[with-model-conf]])
+
+  This uses [[eval-and-write-results]] to actually write the results.
+
+  See [[evaluations-file]]."
   ([classifier-sets set-key]
-   (eval-and-write (run-tests classifier-sets set-key)))
-  ([results]
-   (letfn [(output-file [name]
-             (let [model-conf (model-config)]
-               (io/file (cl/analysis-report-resource)
-                        (format "%s-%s.xls" (:name model-conf) name))))]
-     (let [output-file (output-file "classification")
-           model-conf (model-config)]
-       (cl/excel-results
-        [{:sheet-name (format "%s Classification" (str/capitalize (:name model-conf)))
-          :results results}]
-        output-file)
-       (log/infof "wrote results file: %s" output-file)
-       output-file))))
+   (eval-and-write-results (run-tests classifier-sets set-key)))
+  ([classifier-sets set-key file]
+   (eval-and-write-results (run-tests classifier-sets set-key) file)))
 
 (defn train-test-series
   "Test and train with different rations and return the results.  The return

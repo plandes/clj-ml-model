@@ -298,7 +298,7 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
                 *get-data-fn* get-data]
         (cross-validate *cross-fold-count*)))))
 
-(defn eval-to-results [eval attribs classifier]
+(defn- eval-to-results [eval attribs instances-trained classifier]
   {:eval eval
    :feature-metas attribs
    :classifier classifier
@@ -309,6 +309,7 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
    :instances-total (.numInstances eval)
    :instances-correct (.correct eval)
    :instances-incorrct (.incorrect eval)
+   :instances-trained instances-trained
 
    ;; metrics
    :accuracy (.pctCorrect eval)
@@ -332,7 +333,9 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
         {:keys [eval attribs train-total] :as cve}
         (cross-validate-evaluation classifier data attributes)]
     (merge (select-keys cve [train-total])
-           (eval-to-results eval (or attribs attributes '("none")) classifier))))
+           (eval-to-results eval (or attribs attributes '("none"))
+                            (/ (.numInstances eval) *cross-fold-count*)
+                            classifier))))
 
 (defn train-classifier
   "Train **classifier** (`weka.classifiers.Classifier`)."
@@ -381,7 +384,8 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
                 (train-classifier classifier attribs)
                 (-> (test-classifier classifier attribs
                                      train-instances test-instances)
-                    (eval-to-results attribs classifier)
+                    (eval-to-results attribs (.numInstances train-instances)
+                                     classifier)
                     (assoc :train-total (.numInstances train-instances)
                            :test-total (.numInstances test-instances)))))
          doall)))
@@ -445,7 +449,8 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
           (select-keys res [:accuracy :wprecision :wrecall :wfmeasure
                             :kappa :rmse :classifier :classify-attrib
                             :instances-total :instances-correct
-                            :instances-incorrct :train-total :test-total])
+                            :instances-incorrct :instances-trained
+                            :train-total :test-total])
           {:feature-metas (map keyword (-> res :feature-metas))
            :result res
            :all-results results}))

@@ -184,7 +184,8 @@ docs](https://github.com/plandes/clj-ml-model)."
   the context (see [[zensols.model.execute-classifier]])."
   [model]
   (doseq [key [:instances-total :instances-correct :instances-incorrct
-               :name :create-time :accuracy :wprecision :wrecall :wfmeasure]]
+               :instances-trained :name :create-time
+               :accuracy :wprecision :wrecall :wfmeasure]]
     (println (format "%s: %s" (name key) (get model key))))
   (println "features:")
   (println (:feature-metas model))
@@ -210,14 +211,24 @@ docs](https://github.com/plandes/clj-ml-model)."
     (log/infof "wrote model dump to file %s" outfile)
     outfile))
 
+(defn classifier-file
+  "Return the default file used to create a model data file
+  with [[write-classifier]]."
+  [model]
+  (io/file (cl/analysis-report-resource)
+           (format "%s-classifier.dat" (:name model))))
+
 (defn write-classifier
   "Serialize (just) the classifier to the file system.
 
   * **model** a model created from
-  [[zensols.model.eval-classifier/train-model]]"
-  [model]
-  (let [file (io/file (cl/analysis-report-resource)
-                      (format "%s-classifier.dat" (:name model)))]
+  [[zensols.model.eval-classifier/train-model]]
+
+  See [[classifier-file]]."
+  ([model]
+   (->> (classifier-file model)
+        (write-classifier model)))
+  ([model file]
    (with-open [out (output-stream file)]
      (let [out-obj (java.io.ObjectOutputStream. out)]
        (.writeObject out-obj (:classifier model))))))
@@ -335,24 +346,34 @@ docs](https://github.com/plandes/clj-ml-model)."
                 (map #(get row %) columns)))
          (#(dr/display-results % :column-names col-names)))))
 
+(defn predictions-file
+  "Return the default file used to create a predictions spreadsheet file
+  with [[write-predictions]]."
+  [model]
+  (io/file (cl/analysis-report-resource)
+           (format "%s-predictions.xls" (:name model))))
+
 (defn write-predictions
   "Write **predictions** given by [[predict]] to the analysis directory.
 
   See [[zensols.model.classifier/analysis-report-resource]] for information
-  about to where the spreadsheet is written."
-  [predictions]
-  (let [{:keys [columns data model]} predictions
-        col-names (map name columns)
-        file (io/file (cl/analysis-report-resource)
-                      (format "%s-predictions.xls" (:name model)))]
-    (-> (excel/build-workbook
-         (excel/workbook-hssf)
-         {(format "%s Predictions" (str/capitalize (:name model)))
-          (->> data
-               (map (fn [row]
-                      (map #(get row %) columns)))
-               (cons col-names)
-               (ss/headerize))})
-        (ss/autosize-columns)
-        (excel/save file))
-    (log/infof "wrote predictions to %s" file)))
+  about to where the spreadsheet is written.
+
+  See [[predictions-file]]."
+  ([prediction]
+   (->> (predictions-file (:model prediction))
+        (write-predictions prediction)))
+  ([predictions file]
+   (let [{:keys [columns data model]} predictions
+         col-names (map name columns)]
+     (-> (excel/build-workbook
+          (excel/workbook-hssf)
+          {(format "%s Predictions" (str/capitalize (:name model)))
+           (->> data
+                (map (fn [row]
+                       (map #(get row %) columns)))
+                (cons col-names)
+                (ss/headerize))})
+         (ss/autosize-columns)
+         (excel/save file))
+     (log/infof "wrote predictions to %s" file))))
