@@ -152,9 +152,13 @@ docs](https://github.com/plandes/clj-ml-model)."
   (cl/model-exists? (:name (model-config))))
 
 (defn read-model
-  "Read/unpersist the model from the file system."
-  [& {:keys [fail-if-not-exists?] :or {fail-if-not-exists? true}}]
-  (cl/read-model (:name (model-config)) :fail-if-not-exists? fail-if-not-exists?))
+  "Read/unpersist the model from the file system.
+  If **file** is given, use that file instead of getting it
+  from [[zensols.model.classifier/analysis-report-resource]]."
+  [& {:keys [fail-if-not-exists? file]
+      :or {fail-if-not-exists? true
+           file (:name (model-config))}}]
+  (cl/read-model file :fail-if-not-exists? fail-if-not-exists?))
 
 (defn prime-model
   "Prime a trained or unpersisted ([[read-model]]) model for classification
@@ -221,8 +225,10 @@ docs](https://github.com/plandes/clj-ml-model)."
 (defn write-classifier
   "Serialize (just) the classifier to the file system.
 
-  * **model** a model created from
-  [[zensols.model.eval-classifier/train-model]]
+  The **model** parameter is a model created from
+  [[zensols.model.eval-classifier/train-model]].  If **file** is given, use
+  that file instead of getting it
+  from [[zensols.model.classifier/analysis-report-resource]].
 
   See [[classifier-file]]."
   ([model]
@@ -354,7 +360,9 @@ docs](https://github.com/plandes/clj-ml-model)."
            (format "%s-predictions.xls" (:name model))))
 
 (defn write-predictions
-  "Write **predictions** given by [[predict]] to the analysis directory.
+  "Write **predictions** given by [[predict]] to the analysis directory.  If
+  **file** is given, use that file instead of getting it
+  from [[zensols.model.classifier/analysis-report-resource]].
 
   See [[zensols.model.classifier/analysis-report-resource]] for information
   about to where the spreadsheet is written.

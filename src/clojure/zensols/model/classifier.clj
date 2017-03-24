@@ -126,16 +126,14 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
   (res/resource-path :analysis-report))
 
 (defn model-read-resource
-  "Return a file pointing to model with `name`.
-
-  See [[model-read-resource]]."
+  "Return a file pointing to model with `name` using the the `:model-read`
+  resource path (see [[zensols.actioncli.resource/resource-path]])."
   [name]
   (res/resource-path :model-read (format "%s.dat" name)))
 
 (defn model-write-resource
-  "Return a file pointing to model with `name`.
-
-  See [[model-read-resource]]."
+  "Return a file pointing to model with `name` using the the `:model-write`
+  resource path (see [[zensols.actioncli.resource/resource-path]])."
   [name]
   (res/resource-path :model-write (format "%s.dat" name)))
 
@@ -147,7 +145,9 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
   (.exists (model-read-resource name)))
 
 (defn read-model
-  "Get a saved model (classifier and attributes used).
+  "Get a saved model (classifier and attributes used).  If **name** is a
+  string, use [[model-read-resource]] to calculate the file name.  Otherwise,
+  it should be a file of where the model exists.
 
   See [[model-read-resource]].
 
@@ -155,8 +155,11 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
   ----
   * **:fail-if-not-exists?** if `true` then throw an exception if the model
   file is missing"
-  [name & {:keys [fail-if-not-exists?] :or {fail-if-not-exists? true}}]
-  (let [res (model-read-resource name)
+  [name & {:keys [fail-if-not-exists?]
+           :or {fail-if-not-exists? true}}]
+  (let [res (if (instance? File name)
+              name
+              (model-read-resource name))
         file-res? (instance? File res)
         exists? (and file-res? (.exists res))]
     (if (and fail-if-not-exists? file-res? (not exists?))
@@ -171,11 +174,15 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
             (.readObject in-obj)))))))
 
 (defn write-model
-  "Get a saved model (classifier and attributes used).
+  "Get a saved model (classifier and attributes used).  If **name** is a
+  string, use [[model-write-resource]] to calculate the file name.  Otherwise,
+  it should be a file of where to write the model.
 
   See [[model-read-resource]]"
   [name model]
-  (let [file (model-write-resource name)]
+  (let [file (if (instance? File name)
+              name
+              (model-read-resource name))]
     (.mkdirs (.getParentFile file))
     (with-open [out (output-stream file)]
       (let [out-obj (java.io.ObjectOutputStream. out)]

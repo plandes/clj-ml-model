@@ -51,14 +51,18 @@ validation (see [[*two-pass-config*]])."
      (io/file (cl/analysis-report-resource) file-name))))
 
 (defn read-arff
-  "Read the ARFF file configured with [[with-model-conf]]."
+  "Read the ARFF file configured with [[with-model-conf]].  If **file** is
+  given, use that file instead of getting it
+  from [[zensols.model.classifier/analysis-report-resource]]."
   ([]
    (read-arff (analysis-file)))
   ([file]
    (cl/read-arff file)))
 
 (defn write-arff
-  "Write the ARFF file configured with [[with-model-conf]]."
+  "Write the ARFF file configured with [[with-model-conf]].  If **file** is
+  given, use that file instead of getting it
+  from [[zensols.model.classifier/analysis-report-resource]]."
   ([]
    (write-arff (analysis-file)))
   ([file]
@@ -325,18 +329,19 @@ validation (see [[*two-pass-config*]])."
 
   See [[zensols.model.classifier/model-dir]] for information about to where the
   model is written."
-  [model]
-  (let [model-conf (model-config)
-        context-fn (:context-fn model-conf)
-        persist-name (model-persist-name)]
-    (log/tracef "saving classifer %s as %s"
-                (type (:classifier model)) persist-name)
-    (let [context (if context-fn (context-fn))
-          model (if context
-                  (assoc model :context context)
-                  model)]
-      (cl/write-model persist-name model))
-    model))
+  ([model]
+   (write-model model (model-persist-name)))
+  ([model name]
+   (let [model-conf (model-config)
+         context-fn (:context-fn model-conf)]
+     (log/tracef "saving classifer %s as %s"
+                 (type (:classifier model)) name)
+     (let [context (if context-fn (context-fn))
+           model (if context
+                   (assoc model :context context)
+                   model)]
+       (cl/write-model name model))
+     model)))
 
 (defn read-model
   "Read a model that was previously persisted to the file system.
