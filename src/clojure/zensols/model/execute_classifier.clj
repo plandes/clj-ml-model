@@ -11,8 +11,8 @@ docs](https://github.com/plandes/clj-ml-model)."
   (:use [clojure.java.io :as io :only [input-stream output-stream file]])
   (:use [clojure.pprint :only [pprint]])
   (:require [clojure.tools.logging :as log]
-            [clojure.string :as str])
-  (:require [clj-excel.core :as excel])
+            [clojure.string :as str]
+            [clojure.data.csv :as csv])
   (:require [zensols.tabres.display-results :as dr])
   (:require [zensols.actioncli.resource :refer (resource-path)]
             [zensols.util.spreadsheet :as ss]
@@ -357,7 +357,7 @@ docs](https://github.com/plandes/clj-ml-model)."
   with [[write-predictions]]."
   [model]
   (io/file (cl/analysis-report-resource)
-           (format "%s-predictions.xls" (:name model))))
+           (format "%s-predictions.csv" (:name model))))
 
 (defn write-predictions
   "Write **predictions** given by [[predict]] to the analysis directory.  If
@@ -374,14 +374,10 @@ docs](https://github.com/plandes/clj-ml-model)."
   ([predictions file]
    (let [{:keys [columns data model]} predictions
          col-names (map name columns)]
-     (-> (excel/build-workbook
-          (excel/workbook-hssf)
-          {(format "%s Predictions" (str/capitalize (:name model)))
-           (->> data
-                (map (fn [row]
-                       (map #(get row %) columns)))
-                (cons col-names)
-                (ss/headerize))})
-         (ss/autosize-columns)
-         (excel/save file))
+     (with-open [writer (io/writer file)]
+       (->> data
+            (map (fn [row]
+                   (map #(get row %) columns)))
+            (cons col-names)
+            (csv/write-csv writer)))
      (log/infof "wrote predictions to %s" file))))
