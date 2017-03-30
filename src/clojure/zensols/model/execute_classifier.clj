@@ -187,7 +187,7 @@ docs](https://github.com/plandes/clj-ml-model)."
   performance metrics, the classifier, features used to create the model and
   the context (see [[zensols.model.execute-classifier]])."
   [model]
-  (doseq [key [:instances-total :instances-correct :instances-incorrct
+  (doseq [key [:instances-total :instances-correct :instances-incorrect
                :instances-trained :name :create-time
                :accuracy :wprecision :wrecall :wfmeasure]]
     (println (format "%s: %s" (name key) (get model key))))

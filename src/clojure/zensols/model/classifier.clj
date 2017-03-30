@@ -1,7 +1,7 @@
 ;; Written by Paul Landes -- Dec 2014
 
 (ns ^{:doc
-"A utility library that wraps Weka library.  This library works
+      "A utility library that wraps Weka library.  This library works
     with [[zensols.model.weka]] do the following:
   * Cross validate models
   * Manage and sort results (i.e. cross validations)
@@ -181,8 +181,8 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
   See [[model-read-resource]]"
   [name model]
   (let [file (if (instance? File name)
-              name
-              (model-read-resource name))]
+               name
+               (model-read-resource name))]
     (.mkdirs (.getParentFile file))
     (with-open [out (output-stream file)]
       (let [out-obj (java.io.ObjectOutputStream. out)]
@@ -253,7 +253,7 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
      ;; reusable after evaluation
      (.crossValidateModel eval classifier insts folds (*rand-fn*) zero-arg-arr)
      (merge {:eval eval
-             :train-total (.numInstances insts)}
+             :instances-trained (.numInstances insts)}
             (if two-pass-validation?
               {:attribs (->> (weka/attributes-for-instances
                               (-> eval (.getTrainInstances) (.get 0)))
@@ -305,18 +305,17 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
                 *get-data-fn* get-data]
         (cross-validate *cross-fold-count*)))))
 
-(defn- eval-to-results [eval attribs instances-trained classifier]
+(defn- eval-to-results [eval attribs classifier]
   {:eval eval
    :feature-metas attribs
    :classifier classifier
    :classify-attrib (keyword *class-feature-meta*)
 
-     ;;; evaluation results
+   ;; evaluation results
    ;; basic stats
    :instances-total (.numInstances eval)
    :instances-correct (.correct eval)
-   :instances-incorrct (.incorrect eval)
-   :instances-trained instances-trained
+   :instances-incorrect (.incorrect eval)
 
    ;; metrics
    :accuracy (.pctCorrect eval)
@@ -337,11 +336,10 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
                "none"))
   (let [data (get-data)
         _ (log/infof "cross validate on %d instances" (.numInstances data))
-        {:keys [eval attribs train-total] :as cve}
+        {:keys [eval attribs instances-trained] :as cve}
         (cross-validate-evaluation classifier data attributes)]
-    (merge (select-keys cve [train-total])
+    (merge (select-keys cve [instances-trained])
            (eval-to-results eval (or attribs attributes '("none"))
-                            (/ (.numInstances eval) *cross-fold-count*)
                             classifier))))
 
 (defn train-classifier
@@ -383,19 +381,21 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
 (defn train-test-classifier [classifier feature-meta-sets
                              train-instances test-instances]
   (binding [*get-data-fn* #(identity train-instances)]
-    (->> feature-meta-sets
-         (map #(map name %))
-         (map (fn [attribs]
-                (log/debugf "classifier: %s, attribs: %s"
-                            classifier (pr-str attribs))
-                (train-classifier classifier attribs)
-                (-> (test-classifier classifier attribs
-                                     train-instances test-instances)
-                    (eval-to-results attribs (.numInstances train-instances)
-                                     classifier)
-                    (assoc :train-total (.numInstances train-instances)
-                           :test-total (.numInstances test-instances)))))
-         doall)))
+    (let [trained-count (.numInstances test-instances)
+          tested-count (.numInstances train-instances)]
+     (->> feature-meta-sets
+          (map #(map name %))
+          (map (fn [attribs]
+                 (log/debugf "classifier: %s, attribs: %s"
+                             classifier (pr-str attribs))
+                 (train-classifier classifier attribs)
+                 (-> (test-classifier classifier attribs
+                                      train-instances test-instances)
+                     (eval-to-results attribs classifier)
+                     (assoc :instances-trained trained-count
+                            :instances-tested tested-count
+                            :instances-total (+ trained-count tested-count)))))
+          doall))))
 
 (defn classify-instance
   "Make predictions for all instances.
@@ -456,8 +456,7 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
           (select-keys res [:accuracy :wprecision :wrecall :wfmeasure
                             :kappa :rmse :classifier :classify-attrib
                             :instances-total :instances-correct
-                            :instances-incorrct :instances-trained
-                            :train-total :test-total])
+                            :instances-incorrect :instances-trained :instances-tested])
           {:feature-metas (map keyword (-> res :feature-metas))
            :result res
            :all-results results}))
@@ -540,7 +539,10 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
       ;;(println (format "recall: %s" (.recall (:eval result) 0)))
       (println (format "classifier: %s" (.getName (.getClass (:classifier result)))))
       (println (format "attributes: %s" (str/join ", "(:feature-metas result))))
-      (doseq [keyval (dissoc result :classifier :feature-metas :eval :data)]
-        (println (format "%s: %s" (name (first keyval)) (second keyval)))))))
+      (->> (dissoc result :classifier :feature-metas :eval :data)
+           (into (sorted-set))
+           (map (fn [[k v]]
+                  (println (format "%s: %s" (name k) v))))
+           doall))))
 
 (initialize)

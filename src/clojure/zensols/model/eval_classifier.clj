@@ -1,5 +1,5 @@
 (ns ^{:doc
-"A *client* entry point library to help with evaluating machine learning
+      "A *client* entry point library to help with evaluating machine learning
 models.  This library not only wraps the Weka library but also provides
 additional functionality like a two pass cross
 validation (see [[*two-pass-config*]])."
@@ -70,18 +70,18 @@ validation (see [[*two-pass-config*]])."
      (cl/write-arff (by-set-type-instances :train-test)))
    file))
 
-(defn- result-matrix
-  "Helper function to generate a matrix of features as configured in a model
-  with [[with-model-conf]].
+(defn- feature-matrix
+  "Generate a matrix of features as configured in a model with
+  [[with-model-conf]].
 
   For the non-zero-arg form, see [[with-model-conf]]."
   ([]
    (let [{:keys [feature-metas-fn display-feature-metas-fn
                  class-feature-meta-fn create-feature-sets-fn]} (model-config)
          display-feature-metas-fn (or display-feature-metas-fn feature-metas-fn)]
-     (result-matrix (display-feature-metas-fn)
-                    (class-feature-meta-fn)
-                    (create-feature-sets-fn))))
+     (feature-matrix (display-feature-metas-fn)
+                     (class-feature-meta-fn)
+                     (create-feature-sets-fn))))
   ([feature-metas class-feature-meta feature-sets]
    (let [keys (map first (concat (list class-feature-meta) feature-metas))]
      (->> feature-sets
@@ -96,23 +96,32 @@ validation (see [[*two-pass-config*]])."
 
   For the non-zero-arg form, see [[with-model-conf]]."
   []
-  (let [{:keys [column-names data]} (result-matrix)]
+  (let [{:keys [column-names data]} (feature-matrix)]
     (dr/display-results data :column-names column-names)))
+
+(defn features-file
+  "Return the default file used to create the features output file
+  with [[write-features]]."
+  []
+  (analysis-file "%s-features.csv"))
 
 (defn write-features
   "Write features as configured in a model with [[with-model-conf]] to a CSV
   spreadsheet file.
 
+  See [[features-file]] for the default file
+
   For the non-zero-arg form, see [[with-model-conf]]."
-  []
-  (let [file (analysis-file "%s-features.csv")
-        {:keys [column-names data]} (result-matrix)]
-    (with-open [writer (io/writer file)]
-      (->> data
-           (cons column-names)
-           (csv/write-csv writer)))
-    (log/infof "wrote features file: %s" file)
-    file))
+  ([]
+   (write-features (features-file)))
+  ([file]
+   (let [{:keys [column-names data]} (feature-matrix)]
+     (with-open [writer (io/writer file)]
+       (->> data
+            (cons column-names)
+            (csv/write-csv writer)))
+     (log/infof "wrote features file: %s" file)
+     file)))
 
 (defn- cross-validate-results-struct
   "Create a data structure with cross validation results."
@@ -154,9 +163,9 @@ validation (see [[*two-pass-config*]])."
     (log/debugf "model config keys: %s" (keys model-conf))
     (let [classifier-attrib (first (exc/model-classifier-label))
           feature-meta-sets (get (:feature-sets-set model-conf)
-                               feature-sets-key)
+                                 feature-sets-key)
           _ (assert feature-meta-sets (format "no such feature meta set: <%s>"
-                                            feature-sets-key))
+                                              feature-sets-key))
           instances (exc/cross-fold-instances)
           num-inst (.numInstances instances)
           folds *cross-fold-count*]
@@ -198,8 +207,8 @@ validation (see [[*two-pass-config*]])."
     (assert train-instances "train-instances")
     (assert test-instances "test-instances")
     (log/infof "number of train/test instances:(%d, %d)"
-                (.numInstances train-instances)
-                (.numInstances test-instances))
+               (.numInstances train-instances)
+               (.numInstances test-instances))
     (log/debugf "feature metas: %s " (pr-str feature-meta-sets))
     (log/tracef "train instances class: %s"
                 (-> train-instances .getClass .getName))
@@ -419,7 +428,7 @@ validation (see [[*two-pass-config*]])."
                      (map (fn [res]
                             (let [name (-> res :classifier cl/classifier-name)]
                               {:name name
-                               :stats (map #(get res %) [:train-total :test-total :wfmeasure :wprecision :wrecall])})))
+                               :stats (map #(get res %) [:instances-trained :instances-tested :wfmeasure :wprecision :wrecall])})))
                      (#(hash-map (-> % first :name)
                                  (->> (map :stats %)
                                       (cons ["Train" "Test" "F-Measure" "Precision" "Recall"])))))))
