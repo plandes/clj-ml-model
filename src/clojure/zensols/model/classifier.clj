@@ -144,10 +144,9 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
   [name]
   (.exists (model-read-resource name)))
 
+;; http://stackoverflow.com/questions/23018870/how-to-read-a-whole-binary-file-nippy-into-byte-array-in-clojure
 (defn- slurpb
-  "Convert an input stream is to byte array.
-
-  Thanks to the [author](http://stackoverflow.com/questions/23018870/how-to-read-a-whole-binary-file-nippy-into-byte-array-in-clojure)."
+  "Convert an input stream is to byte array."
   [is & {:keys [buffer-size]
          :or {buffer-size 1024}}]
   (with-open [baos (java.io.ByteArrayOutputStream.)]
