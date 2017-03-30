@@ -148,13 +148,14 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
   "Convert an input stream is to byte array.
 
   Thanks to the [author](http://stackoverflow.com/questions/23018870/how-to-read-a-whole-binary-file-nippy-into-byte-array-in-clojure)."
-  [is]
+  [is & {:keys [buffer-size]
+         :or {buffer-size 1024}}]
   (with-open [baos (java.io.ByteArrayOutputStream.)]
-    (let [ba (byte-array 2000)]
-      (loop [n (.read is ba 0 2000)]
+    (let [ba (byte-array buffer-size)]
+      (loop [n (.read is ba 0 buffer-size)]
         (when (> n 0)
           (.write baos ba 0 n)
-          (recur (.read is ba 0 2000))))
+          (recur (.read is ba 0 buffer-size))))
       (.toByteArray baos))))
 
 (defn read-model
