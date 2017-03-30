@@ -19,11 +19,6 @@ You probably don't want to use this library directly.  Please look
 at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
       :author "Paul Landes"}
     zensols.model.classifier
-  (:use [clojure.java.io :as io :only [input-stream output-stream]])
-  (:use [clojure.pprint :only [pprint]])
-  (:use [clj-excel.core :as excel])
-  (:require [clojure.tools.logging :as log]
-            [clojure.string :as str])
   (:import [java.io File])
   (:import (zensols.weka NoCloneInstancesEvaluation))
   (:import (weka.classifiers Classifier Evaluation)
@@ -32,6 +27,11 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
            (weka.core.converters ArffLoader ConverterUtils$DataSink)
            (weka.filters Filter)
            (weka.core Utils Instances))
+  (:require [clojure.tools.logging :as log]
+            [clojure.java.io :as io]
+            [clojure.string :as str])
+  (:require [clj-excel.core :as excel]
+            [taoensso.nippy :as nippy])
   (:require [zensols.actioncli.resource :as res])
   (:require [zensols.model.weka :as weka]))
 
@@ -144,6 +144,19 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
   [name]
   (.exists (model-read-resource name)))
 
+(defn- slurpb
+  "Convert an input stream is to byte array.
+
+  Thanks to the [author](http://stackoverflow.com/questions/23018870/how-to-read-a-whole-binary-file-nippy-into-byte-array-in-clojure)."
+  [is]
+  (with-open [baos (java.io.ByteArrayOutputStream.)]
+    (let [ba (byte-array 2000)]
+      (loop [n (.read is ba 0 2000)]
+        (when (> n 0)
+          (.write baos ba 0 n)
+          (recur (.read is ba 0 2000))))
+      (.toByteArray baos))))
+
 (defn read-model
   "Get a saved model (classifier and attributes used).  If **name** is a
   string, use [[model-read-resource]] to calculate the file name.  Otherwise,
@@ -169,9 +182,9 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
       (log/infof "no model resource found %s" res)
       (do
         (log/infof "reading model from %s" res)
-        (with-open [in (input-stream res)]
-          (let [in-obj (java.io.ObjectInputStream. in)]
-            (.readObject in-obj)))))))
+        (with-open [in (io/input-stream res)]
+          (->> (slurpb in)
+               nippy/thaw))))))
 
 (defn write-model
   "Get a saved model (classifier and attributes used).  If **name** is a
@@ -184,9 +197,8 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
                name
                (model-read-resource name))]
     (.mkdirs (.getParentFile file))
-    (with-open [out (output-stream file)]
-      (let [out-obj (java.io.ObjectOutputStream. out)]
-        (.writeObject out-obj model)))
+    (with-open [out (io/output-stream file)]
+      (io/copy (nippy/freeze model) out))
     (log/infof "saved model to %s" file)
     model))
 

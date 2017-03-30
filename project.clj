@@ -29,6 +29,9 @@
                  [org.clojure/data.csv "0.1.2"]
                  [com.zensols.tools/misc "0.0.4"]
 
+                 ;; model serialization
+                 [com.taoensso/nippy "2.13.0"]
+
                  ;; ML
                  [tw.edu.ntu.csie/libsvm "3.17"]
                  [nz.ac.waikato.cms.weka/weka-stable "3.6.13"]]
