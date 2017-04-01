@@ -32,7 +32,8 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
             [clojure.string :as str])
   (:require [clj-excel.core :as excel]
             [taoensso.nippy :as nippy])
-  (:require [zensols.actioncli.resource :as res])
+  (:require [zensols.actioncli.resource :as res]
+            [zensols.util.spreadsheet :as ss])
   (:require [zensols.model.weka :as weka]))
 
 (def ^:private zero-arg-arr (into-array String []))
@@ -516,15 +517,16 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
                              RMSE Classifier Attributes)]
       (-> (excel/build-workbook
            (excel/workbook-hssf)
-           (apply
-            merge
-            (map (fn [res]
-                   (let [sheet-no-header (create-sheet-data (:results res))
-                         extra-headers (map :header (:extra-cols (first (:results res))))
-                         sheet-data (prepend-header sheet-no-header
-                                                    (concat headers extra-headers))]
-                     {(:sheet-name res) sheet-data}))
-                 sheet-name-results)))
+           (->> sheet-name-results
+                (map (fn [res]
+                       (let [sheet-no-header (create-sheet-data (:results res))
+                             extra-headers (map :header (:extra-cols (first (:results res))))
+                             sheet-data (prepend-header sheet-no-header
+                                                        (concat headers extra-headers))]
+                         {(:sheet-name res)
+                          (ss/headerize sheet-data)})))
+                (apply merge)))
+          (ss/autosize-columns)
           (excel/save out-file))
       (log/infof "wrote results file: %s" out-file))))
 
