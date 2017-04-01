@@ -75,28 +75,33 @@ validation (see [[*two-pass-config*]])."
   [[with-model-conf]].
 
   For the non-zero-arg form, see [[with-model-conf]]."
-  ([]
-   (let [{:keys [feature-metas-fn display-feature-metas-fn
-                 class-feature-meta-fn create-feature-sets-fn]} (model-config)
-         display-feature-metas-fn (or display-feature-metas-fn feature-metas-fn)]
-     (feature-matrix (display-feature-metas-fn)
-                     (class-feature-meta-fn)
-                     (create-feature-sets-fn))))
-  ([feature-metas class-feature-meta feature-sets]
-   (let [keys (map first (concat (list class-feature-meta) feature-metas))]
-     (->> feature-sets
-          (map (fn [tok]
-                 (map (fn [tkey]
-                        (get tok tkey))
-                      keys)))
-          (hash-map :column-names (map name keys) :data)))))
+  [& {:keys [max] :as adb-keys
+      :or {max Integer/MAX_VALUE}}]
+  (let [{:keys [feature-metas-fn display-feature-metas-fn
+                class-feature-meta-fn create-feature-sets-fn]} (model-config)
+        display-feature-metas-fn (or display-feature-metas-fn feature-metas-fn)
+        feature-metas (display-feature-metas-fn)
+        class-feature-meta (class-feature-meta-fn)
+        adb-keys (if adb-keys
+                   (->> (dissoc adb-keys :max)
+                        (apply into [])))
+        feature-sets (->> adb-keys
+                          (apply create-feature-sets-fn)
+                          (take max))]
+    (let [keys (map first (concat (list class-feature-meta) feature-metas))]
+      (->> feature-sets
+           (map (fn [tok]
+                  (map (fn [tkey]
+                         (get tok tkey))
+                       keys)))
+           (hash-map :column-names (map name keys) :data)))))
 
 (defn display-features
   "Display features as configured in a model with [[with-model-conf]].
 
   For the non-zero-arg form, see [[with-model-conf]]."
-  []
-  (let [{:keys [column-names data]} (feature-matrix)]
+  [& adb-keys]
+  (let [{:keys [column-names data]} (apply feature-matrix adb-keys)]
     (dr/display-results data :column-names column-names)))
 
 (defn features-file
