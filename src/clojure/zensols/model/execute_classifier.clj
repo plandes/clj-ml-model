@@ -16,6 +16,7 @@ docs](https://github.com/plandes/clj-ml-model)."
   (:require [zensols.tabres.display-results :as dr])
   (:require [zensols.actioncli.resource :refer (resource-path)]
             [zensols.util.spreadsheet :as ss]
+            [zensols.util.string :as zs]
             [zensols.model.classifier :as cl]
             [zensols.model.weka :as weka]))
 
@@ -58,7 +59,9 @@ docs](https://github.com/plandes/clj-ml-model)."
   * **:set-context-fn** (optional) a function that is called to set the context
   created with **:context-fn** and retrieved from the persisted model; this is
   useful when using/executing the model and the context is needed before
-  **:create-features-fn** is called
+  **:create-features-fn** is called; if this function is provided it replaces
+  the unpersisted context in case there is any *thawing* logic that might be
+  needed for the model
 
   * **:model-return-keys** what the classifier will return (by default
   `{:label :distributions}`)
@@ -103,10 +106,9 @@ docs](https://github.com/plandes/clj-ml-model)."
    (create-instances features-set nil))
   ([features-set context]
    (log/infof "generating instances from %d feature sets" (count features-set))
+   (log/debugf "feature sets: <<%s>>" (zs/trunc features-set))
    (log/tracef "feature sets: <<%s>>" (pr-str features-set))
-   (let [{:keys [name set-context-fn]} (model-config)]
-     (if (and set-context-fn context)
-       (set-context-fn context))
+   (let [{:keys [name]} (model-config)]
      (weka/instances
       (format "%s-classify" name)
       features-set
@@ -158,7 +160,12 @@ docs](https://github.com/plandes/clj-ml-model)."
   [& {:keys [fail-if-not-exists? file]
       :or {fail-if-not-exists? true
            file (:name (model-config))}}]
-  (cl/read-model file :fail-if-not-exists? fail-if-not-exists?))
+  (let [model (cl/read-model file :fail-if-not-exists? fail-if-not-exists?)
+        context (:context model)
+        {:keys [set-context-fn]} (model-config)]
+    (if (and set-context-fn context)
+      (assoc model :context (set-context-fn context))
+      model)))
 
 (defn prime-model
   "Prime a trained or unpersisted ([[read-model]]) model for classification
