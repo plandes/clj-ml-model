@@ -193,17 +193,25 @@ docs](https://github.com/plandes/clj-ml-model)."
   "Print informtation from a (usually serialized) model.  This data includes
   performance metrics, the classifier, features used to create the model and
   the context (see [[zensols.model.execute-classifier]])."
-  [model]
-  (doseq [key [:instances-total :instances-correct :instances-incorrect
-               :instances-trained :name :create-time
-               :accuracy :wprecision :wrecall :wfmeasure]]
-    (println (format "%s: %s" (name key) (get model key))))
-  (println "features:")
-  (println (:feature-metas model))
-  (println "classifier:")
-  (println (:classifier model))
-  (println "context:")
-  (println (:context model)))
+  [model & {:keys [metrics? features? classifier? context?]
+            :or {metrics? true
+                 features? true
+                 classifier? true
+                 context? true}}]
+  (when metrics?
+    (doseq [key [:instances-total :instances-correct :instances-incorrect
+                 :instances-trained :name :create-time
+                 :accuracy :wprecision :wrecall :wfmeasure]]
+      (println (format "%s: %s" (name key) (get model key)))))
+  (when features?
+    (println "features:")
+    (println (:feature-metas model)))
+  (when classifier?
+    (println "classifier:")
+    (println (:classifier model)))
+  (when context?
+    (println "context:")
+    (println (:context model))))
 
 (defn dump-model-info
   "Write all data from [[print-model-info]] to the file system.
@@ -211,13 +219,13 @@ docs](https://github.com/plandes/clj-ml-model)."
   See [[zensols.model.classifier/modeldir]] for where the model is read from
   and [[zensols.model.classifier/analysis-report-resource]] for information about to
   where the model information is written."
-  [model]
+  [model & opts]
   (let [model-conf (:model-conf model)
         outfile (io/file (cl/analysis-report-resource)
                          (format "%s-model.txt" (:name model-conf)))]
     (with-open [writer (io/writer outfile)]
       (binding [*out* writer]
-        (print-model-info model))
+        (apply print-model-info model opts))
       (.flush writer))
     (log/infof "wrote model dump to file %s" outfile)
     outfile))
