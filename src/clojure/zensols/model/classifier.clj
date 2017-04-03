@@ -196,8 +196,9 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
   [name model]
   (let [file (if (instance? File name)
                name
-               (model-read-resource name))]
-    (.mkdirs (.getParentFile file))
+               (model-read-resource name))
+        to-make-dirs (.getParentFile file)]
+    (if to-make-dirs (.mkdirs to-make-dirs))
     (with-open [out (io/output-stream file)]
       (io/copy (nippy/freeze model) out))
     (log/infof "saved model to %s" file)
