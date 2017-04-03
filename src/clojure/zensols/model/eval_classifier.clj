@@ -418,7 +418,10 @@ validation (see [[*two-pass-config*]])."
   The keys are the classifier name and the values are the 2D result matrix."
   [classifiers meta-set divide-ratio-config]
   (let [{:keys [start stop step]} divide-ratio-config
-        {:keys [divide-by-set]} (model-config)]
+        {:keys [divide-by-set]} (model-config)
+        stat-keys [:instances-trained :instances-tested
+                   :wfmeasure :wprecision :wrecall]
+        stat-header ["Train" "Test" "F-Measure" "Precision" "Recall"]]
     (->> classifiers
          (map (fn [classifier]
                 (->> (range (* start 100) (* stop 100) (* step 100))
@@ -433,25 +436,34 @@ validation (see [[*two-pass-config*]])."
                      (map (fn [res]
                             (let [name (-> res :classifier cl/classifier-name)]
                               {:name name
-                               :stats (map #(get res %) [:instances-trained :instances-tested :wfmeasure :wprecision :wrecall])})))
+                               :stats (map #(get res %) stat-keys)})))
                      (#(hash-map (-> % first :name)
                                  (->> (map :stats %)
-                                      (cons ["Train" "Test" "F-Measure" "Precision" "Recall"])))))))
+                                      (cons stat-header)))))))
          (apply merge))))
+
+(defn test-train-series-file
+  "Return the default file used to create an evaluations file
+  with [[eval-and-write]]."
+  ([]
+   (test-train-series-file "train-test-series"))
+  ([fname]
+   (let [model-conf (model-config)]
+     (io/file (cl/analysis-report-resource)
+              (format "%s-%s.csv"
+                      (:name model-conf) fname)))))
 
 (defn write-csv-train-test-series
   "Write the results produced with [[train-test-series]] as a CSV file to the
   analysis directory."
-  [res]
-  (let [{model-name :name} (model-config)]
-    (->> res
-         (map (fn [[classifier-name data]]
-                (let [out-file (io/file (cl/analysis-report-resource)
-                                        (format "%s-%s-train-test-series.csv"
-                                                model-name classifier-name))]
-                  (with-open [writer (io/writer out-file)]
-                    (csv/write-csv writer data)))))
-         doall)))
+  ([res]
+   (write-csv-train-test-series res (test-train-series-file)))
+  ([res out-file]
+   (->> res
+        (map (fn [[classifier-name data]]
+               (with-open [writer (io/writer out-file)]
+                 (csv/write-csv writer data))))
+        doall)))
 
 
 ;; two pass
