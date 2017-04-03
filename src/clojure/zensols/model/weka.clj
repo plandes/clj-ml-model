@@ -87,6 +87,7 @@ and [[zensols.model.execute-classifier]]."
      (if (instance? weka.classifiers.Classifier set-name-or-instance)
        (list set-name-or-instance)
        (map (fn [cl-name]
+              (log/debugf "instantiating classifier: %s" cl-name)
               (.newInstance (Class/forName cl-name)))
             (get *classifiers* set-name-or-instance))))))
 
