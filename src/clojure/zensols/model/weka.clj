@@ -6,7 +6,7 @@ and [[zensols.model.execute-classifier]]."
   (:import [com.zensols.weka IFnClassifier])
   (:require [clojure.tools.logging :as log]
             [clojure.string :as str])
-  (:import (weka.core Attribute Instance Instances FastVector))
+  (:import (weka.core Attribute Instance DenseInstance Instances FastVector))
   (:import (weka.core.converters ArffLoader ConverterUtils$DataSink))
   (:import (weka.classifiers Classifier Evaluation))
   (:import (weka.filters Filter))
@@ -56,7 +56,7 @@ and [[zensols.model.execute-classifier]]."
    :tree '("weka.classifiers.misc.HyperPipes"
            "weka.classifiers.trees.RandomTree"
            "weka.classifiers.trees.RandomForest"
-           "weka.classifiers.trees.NBTree"
+           ;"weka.classifiers.trees.NBTree"
            "weka.classifiers.trees.REPTree")
    :zeror '("weka.classifiers.rules.ZeroR")
    :svm '("weka.classifiers.functions.LibSVM")
@@ -250,7 +250,7 @@ and [[zensols.model.execute-classifier]]."
     (let [insts (Instances. instance-name attrib-vec 0)]
       (->> maps
            (map (fn [[name weights]]
-                  (let [inst (weka.core.Instance. (inc dim))]
+                  (let [inst (weka.core.SparseInstance. (inc dim))]
                     (->> weights
                          (map (fn [[idx weight]]
                                 (.setValueSparse inst idx weight)))
@@ -338,7 +338,7 @@ and [[zensols.model.execute-classifier]]."
             label-type (second class-feature-meta)
             label-val (get feature-set (first class-feature-meta))]
         (log/debugf "label val: %s" label-val)
-        (let [inst (Instance. attrib-count)]
+        (let [inst (DenseInstance. attrib-count)]
           ;; not set for when used for predictions/exercising the model
           (when (not (nil? label-val))
             (let [vfi (value-for-instance label-type label-val)]

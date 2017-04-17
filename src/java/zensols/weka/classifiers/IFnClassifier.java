@@ -19,6 +19,7 @@ import clojure.lang.IFn;
 import clojure.java.api.Clojure;
 
 import weka.classifiers.Classifier;
+import weka.classifiers.AbstractClassifier;
 import weka.classifiers.Sourcable;
 import weka.core.Capabilities;
 import weka.core.Capabilities.Capability;
@@ -27,7 +28,7 @@ import weka.core.Instances;
 import weka.core.WeightedInstancesHandler;
 
 public class IFnClassifier
-    extends Classifier 
+    extends AbstractClassifier
     implements WeightedInstancesHandler, Sourcable {
 
     private String namespace;
