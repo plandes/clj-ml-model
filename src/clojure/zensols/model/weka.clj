@@ -56,7 +56,7 @@ and [[zensols.model.execute-classifier]]."
    :tree '("weka.classifiers.misc.HyperPipes"
            "weka.classifiers.trees.RandomTree"
            "weka.classifiers.trees.RandomForest"
-           ;"weka.classifiers.trees.NBTree"
+                                        ;"weka.classifiers.trees.NBTree"
            "weka.classifiers.trees.REPTree")
    :zeror '("weka.classifiers.rules.ZeroR")
    :svm '("weka.classifiers.functions.LibSVM")
@@ -256,7 +256,7 @@ and [[zensols.model.execute-classifier]]."
                                 (.setValueSparse inst idx weight)))
                          doall)
                     (if add-class?
-                     (.setValueSparse inst (.index label-attrib) (label-map name)))
+                      (.setValueSparse inst (.index label-attrib) (label-map name)))
                     (if def-array
                       (.replaceMissingValues inst def-array))
                     (.add insts inst)
@@ -435,22 +435,22 @@ and [[zensols.model.execute-classifier]]."
   it doesn't take the `java.util.Random` instance"
   [inst & {:keys [train-fn test-fn randomize-fn]}]
   (let [train-state (atom nil)]
-   (proxy [Instances] [inst]
-     (randomize [rand]
-       (log/infof "randominzing: %s with fn=%s" rand randomize-fn)
-       (if randomize-fn (randomize-fn rand)))
-     (trainCV [folds fold rand]
-       (log/debugf "folds: %d, fold no: %d" folds fold)
-       (let [res (proxy-super trainCV folds fold rand)]
-         (if train-fn
-           (train-fn res train-state inst folds fold)
-           res)))
-     (testCV [folds fold]
-       (log/debugf "folds: %d, fold no: %d" folds fold)
-       (let [res (proxy-super testCV folds fold)]
-         (if test-fn
-           (test-fn res train-state inst folds fold)
-           res))))))
+    (proxy [Instances] [inst]
+      (randomize [rand]
+        (log/infof "randominzing: %s with fn=%s" rand randomize-fn)
+        (if randomize-fn (randomize-fn rand)))
+      (trainCV [folds fold rand]
+        (log/debugf "folds: %d, fold no: %d" folds fold)
+        (let [res (proxy-super trainCV folds fold rand)]
+          (if train-fn
+            (train-fn res train-state inst folds fold)
+            res)))
+      (testCV [folds fold]
+        (log/debugf "folds: %d, fold no: %d" folds fold)
+        (let [res (proxy-super testCV folds fold)]
+          (if test-fn
+            (test-fn res train-state inst folds fold)
+            res))))))
 
 (defn instances
   "Create a new `weka.core.Instances` instance.
@@ -524,8 +524,8 @@ and [[zensols.model.execute-classifier]]."
   and evaluate body **exprs**.
 
   Example:
-```
-(let-classifier
+  ```
+  (let-classifier
     (langid-baseline [inst]
        (let [attrib (weka/attribute-by-name inst \"langid-1-id\")
              val (.stringValue inst attrib)
@@ -533,7 +533,7 @@ and [[zensols.model.execute-classifier]]."
          (log/infof \"langid: %s for: %s: res: %s\" val inst rval)
          (if rval 1 0)))
   (terse-results lang-baseline meta-set))
-```"
+  ```"
   {:style/indent 1
    :forms '[(let-classifier fnspecs* exprs*)]
    :special-form true}
