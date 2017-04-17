@@ -46,9 +46,7 @@
                  [nz.ac.waikato.cms.weka/NNge "1.0.2"]
                  [nz.ac.waikato.cms.weka/grading "1.0.2"]
                  [nz.ac.waikato.cms.weka/simpleEducationalLearningSchemes "1.0.1"]
-                 [nz.ac.waikato.cms.weka/DTNB "1.0.2"]
-
-                 ]
+                 [nz.ac.waikato.cms.weka/DTNB "1.0.2"]]
   :profiles {:appassem {:aot :all}
              :snapshot {:git-version {:version-cmd "echo -snapshot"}}
              :dev
