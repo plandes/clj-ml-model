@@ -450,7 +450,9 @@ and [[zensols.model.execute-classifier]]."
         (let [res (proxy-super testCV folds fold)]
           (if test-fn
             (test-fn res train-state inst folds fold)
-            res))))))
+            res)))
+      (add [item]
+        (proxy-super add item)))))
 
 (defn instances
   "Create a new `weka.core.Instances` instance.
@@ -490,8 +492,7 @@ and [[zensols.model.execute-classifier]]."
   (let [res (clone-instances src)]
     (->> (.enumerateInstances dst)
          enumeration-seq
-         (map #(.add res %))
-         doall)
+         (.addAll res))
     res))
 
 (defn- index-for-attribute
