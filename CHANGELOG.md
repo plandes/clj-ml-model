@@ -8,7 +8,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## [Unreleased]
 ### Changed
 - Configurable precision in spreadsheet results.
+- Upgrade from Weka 3.6 to 3.8
+- Fix two pass cross fold validation.
 
+## Added
+- Create predictions spreadsheet output (CSV and Excel); nice for R analysis.
 
 ## [0.0.8] - 2016-12-14
 ### Added
