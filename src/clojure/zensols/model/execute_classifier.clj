@@ -23,54 +23,47 @@ docs](https://github.com/plandes/clj-ml-model)."
 
 (defmacro with-model-conf
   "Evaluates body with a model configuration.
+
+  An example of how this is used is in the [example repo](https://github.com/plandes/clj-example-nlp-ml/blob/master/src/clojure/zensols/example/sa_tp_eval.clj).
+
   The model configuration is a map with the following keys:
 
   * **:name** human readable short name, which is used in file names and
   spreadsheet cells
-
   * **:create-feature-sets-fn** function creates a sequence of maps with each
   map having key/value pairs of the features of the model to be populated; it
   is passed with optional keys:
       * **:set-type** the data set type: `:test` or `:train`, which uses the
       [data set library](https://plandes.github.io/clj-ml-dataset/codox/zensols.dataset.db.html#var-instances)
       convention for easy integration
-
   * **:create-features-fn** just like **create-feature-sets-fn** but creates a
   single feature map used for test/execution after the classifier is built;
   it's called with the arguments that [[classify]] is given to classify an
   instance along with the context generated at train time by **:context-fn** if
   it was provided (see below)--therefore you must provide a two argument
   function if a context is provided at train time
-
   * **:feature-metas-fn** a function that creates a map of key/value
   pairs describing the features where the values are `string`, `boolean`,
   `numeric`, or a sequence of strings representing possible enumeration
   values
-
   * **:display-feature-metas-fn** like **:feature-metas-fn** but used to
   display (i.e. while debugging)
-
   * **:class-feature-meta-fn** just like a **feature-metas-fn** but
   describes the class
-
   * **:context-fn** a function that creates a context (ie. stats on the entire
   training set) and passed to **:create-features-fn**
-
   * **:set-context-fn** (optional) a function that is called to set the context
   created with **:context-fn** and retrieved from the persisted model; this is
   useful when using/executing the model and the context is needed before
   **:create-features-fn** is called; if this function is provided it replaces
   the unpersisted context in case there is any *thawing* logic that might be
   needed for the model
-
   * **:model-return-keys** what the classifier will return (by default
   `{:label :distributions}`)
-
   * **:cross-fold-instances-inst** at atom used to cache the
   `weka.core.Instances` generated from **:create-feature-sets-fn**; when this
   atom is derefed as `nil` **:create-feature-sets-fn** is called to create the
   feature maps
-
   * **:feature-sets-set** a map of key/value pairs where keys are names of
   feature sets and the values are lists of lists of features as symbols"
   {:style/indent 1}
@@ -122,7 +115,7 @@ docs](https://github.com/plandes/clj-ml-model)."
      (weka/instances
       (format "%s-classify" name)
       features-set
-      (model-classifier-feature-types)
+      (model-classifier-feature-types context)
       (model-classifier-label)))))
 
 (defn cross-fold-instances

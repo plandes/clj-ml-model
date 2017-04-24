@@ -2,7 +2,7 @@
       "A *client* entry point library to help with evaluating machine learning
 models.  This library not only wraps the Weka library but also provides
 additional functionality like a two pass cross
-validation (see [[*two-pass-config*]])."
+validation (see [[with-two-pass]])."
       :author "Paul Landes"}
     zensols.model.eval-classifier
   (:require [clojure.tools.logging :as log]
@@ -180,11 +180,6 @@ validation (see [[*two-pass-config*]])."
                                  feature-sets-key)
           _ (assert feature-meta-sets (format "no such feature meta set: <%s>"
                                               feature-sets-key))
-          ;; {:keys [id-key]} *two-pass-config*
-          ;; feature-meta-sets (if id-key
-          ;;                     (->> feature-meta-sets
-          ;;                          (map #(cons (-> id-key name symbol) %)))
-          ;;                     feature-meta-sets)
           instances (exc/cross-fold-instances)
           num-inst (.numInstances instances)
           folds *cross-fold-count*]
@@ -488,67 +483,17 @@ validation (see [[*two-pass-config*]])."
                  (csv/write-csv writer data))))
         doall)))
 
+
 
 ;; two pass
-;; (def ^:dynamic *two-pass-config*
-;;   "When this is non-`nil` use two fold cross validation.
-
-;;   Description
-;;   -----------
-
-;;   Two pass validation is a term used in this library.  It means during
-;;   cross-validation the entire data set is evaluated and (usually) statistics or
-;;   some other additional modeling happens.
-
-;;   Take for example you want to count words (think Naive Bays spam filter).  If
-;;   create features for the entire dataset before cross-validation you're
-;;   *cheating* because the features are based on data not seen from the test
-;;   folds.
-
-;;   To get more accurate performance metrics you can provide functions that takes
-;;   the current training fold, compute your word counts and create your features.
-;;   During the testing phase, the computed data is provided to create features
-;;   based on only that (current) fold.
-
-;;   To use two pass validation ever feature set needs a unique key (not needed as
-;;   a feature).  This key is then given to a function during validation to get
-;;   the corresponding feature set that is to be *stitched* in.
-
-;;   Keys
-;;   ----
-
-;;   This variable is a map with the following keys:
-
-;;   * **:id-key** a function that takes a key as input and returns a feature set
-;;   * **:feature-metas-fn** the same function as described
-;;   in [[zensols.model.execute-classifier/with-model-conf]]
-;;   * **:create-features-fn** the same function as descrbed
-;;   in [[zensols.model.execute-classifier/with-model-conf]]
-;;   * **:context-fn** the same function as descrbed
-;;   in [[zensols.model.execute-classifier/with-model-conf]]
-
-;;   *Note*: When this variable is
-;;   bound, [[zensols.model.classifier/*cross-val-fns*]] needs to be bound as well
-;;   to a map that uses the `two-pass-*` functions.
-
-;;   See [[zensols.model.classifier/*cross-val-fns*]] [[two-pass-model]]"
-;;   nil)
-
-(defn- anon-ids-for-instance [insts id-attrib string?]
-  (->> (range (.numInstances insts))
-       (map (fn [row]
-              (let [inst (-> insts (.instance row))]
-                (if string?
-                  (-> inst (.stringValue id-attrib) Integer/parseInt)
-                  (-> inst (.value id-attrib) int)))))))
 
 (defn two-pass-model
-  "Create a two pass model, which should be merged with the model created
+  "Don't use this function--instead, use [[with-two-pass]].
+
+  Create a two pass model, which should be merged with the model created
   with [[zensols.model.execute-classifier/with-model-conf]].
 
-  * **model** the model created per documentation
-  at [[zensols.model.execute-classifier/with-model-conf]]
-  * **id-key** the `:id-key` documented in [[*two-pass-config*]]"
+  See [[with-two-pass]]."
   [model id-key anon-by-id-fn anons-fn]
   (let [id-key (-> id-key name symbol)]
     (->> model
@@ -563,14 +508,37 @@ validation (see [[*two-pass-config*]])."
                    :feature-sets-set)
          (merge model))))
 
-(defn- two-pass-config []
-  (-> (model-config)
-      :two-pass-config
-      (or (-> "No two pass model found--use `two-pass-model`"
-              (ex-info {:model-config (model-config)})
-              throw))))
+(defn- two-pass-config
+  "Assert and return the two pass configuration."
+  [& {:keys [nothrow?]}]
+  (let [conf (:two-pass-config (model-config))]
+    (if conf
+      conf
+      (if-not nothrow?
+        (-> "No two pass model found--use `two-pass-model`"
+            (ex-info {:model-config (model-config)})
+            throw)))))
 
-(defn two-pass-train-instances [insts state org folds fold]
+(defn executing-two-pass?
+  "Return `true` if we're currently using a two pass cross validation."
+  []
+  (let [tpconf (two-pass-config :nothrow? true)]
+    (not (nil? tpconf))))
+
+(defn- anon-ids-for-instance
+  "Return IDs as integers found in a `core.weka.Instances`."
+  [insts id-attrib]
+  (->> (range (.numInstances insts))
+       (map (fn [row]
+              (-> insts
+                  (.instance row)
+                  (.stringValue id-attrib) Integer/parseInt)))))
+
+(defn two-pass-train-instances
+  "Don't use this function--instead, use [[with-two-pass]].
+
+  This is called by the [[zensols.model.weka]] namespace."
+  [insts state org folds fold]
   (log/infof "training set: %d, org=%d"
               (.numInstances insts)
               (.numInstances org))
@@ -584,10 +552,12 @@ validation (see [[*two-pass-config*]])."
         id-key-att-name (name id-key)
         id-attrib (weka/attribute-by-name insts id-key-att-name)
         _ (assert id-attrib (format "weka attribute for <%s>" id-key-att-name))
-        anon-ids (anon-ids-for-instance insts id-attrib true)
+        anon-ids (anon-ids-for-instance insts id-attrib)
+        _ (log/infof "training %d instances for fold %d of %d"
+                     (count anon-ids) (inc fold) folds)
         _ (log/debugf "anon-ids: %d instances" (count anon-ids))
         _ (log/debugf "maybe invoking create context with: %s" create-context-fn)
-        _ (log/debugf "training instances with ids: <%s>" (s/join ", " anon-ids))
+        _ (log/tracef "ids: <%s>" (s/join ", " anon-ids))
         context (if create-context-fn
                   (create-context-fn :anons-fn anons-fn :id-set anon-ids))
         feature-metas (if context
@@ -601,15 +571,20 @@ validation (see [[*two-pass-config*]])."
         (weka/remove-attributes [id-key-att-name])
         (weka/populate-instances feature-metas data-maps))))
 
-(defn two-pass-test-instances [insts train-state org folds fold]
+(defn two-pass-test-instances
+  "Don't use this function--instead, use [[with-two-pass]].
+
+  This is called by the [[zensols.model.weka]] namespace."
+  [insts train-state org folds fold]
   (log/debugf "testing set: %d" (.numInstances insts))
   (let [{:keys [context feature-metas]} @train-state
         {:keys [create-features-fn]} (model-config)
         {:keys [id-key anons-fn anon-by-id-fn]} (two-pass-config)
         id-key-att-name (name id-key)
         id-attrib (weka/attribute-by-name insts id-key-att-name)
-        anon-ids (anon-ids-for-instance insts id-attrib true)
-        _ (log/infof "testing %d instances" (count anon-ids))
+        anon-ids (anon-ids-for-instance insts id-attrib)
+        _ (log/infof "testing %d instances for fold %d of %d"
+                     (count anon-ids) (inc fold) folds)
         _ (log/debugf "testing instances for ids: <%s>" (s/join ", " anon-ids))
         data-maps (->> anon-ids
                        (map (fn [id]
@@ -624,3 +599,76 @@ validation (see [[*two-pass-config*]])."
     (-> insts
         (weka/remove-attributes [id-key-att-name])
         (weka/populate-instances feature-metas data-maps))))
+
+(defmacro with-two-pass
+  "Like `with-model-conf`, but compute a context state (i.e. statistics needed
+  by the model) on a per fold when executing a cross fold validation.
+
+  The `model-conf` parameter is the same model used
+  with [[zensols.model.execute-classifier/with-model-conf]].
+
+
+## Description
+
+  Two pass validation is a term used in this library.  During cross-validation
+  the entire data set is evaluated and (usually) statistics or some other
+  additional modeling happens.
+
+  Take for example you want to count words (think Naive Bays spam filter).  If
+  create features for the entire dataset before cross-validation you're
+  *cheating* because the features are based on data not seen from the test
+  folds.
+
+  To get more accurate performance metrics you can provide functions that takes
+  the current training fold, compute your word counts and create your features.
+  During the testing phase, the computed data is provided to create features
+  based on only that (current) fold.
+
+  To use two pass validation ever feature set needs a unique key (not needed as
+  a feature).  This key is then given to a function during validation to get
+  the corresponding feature set that is to be *stitched* in.
+
+
+## Option Keys
+
+  In addition to all keys documented
+  in [[zensols.model.execute-classifier/with-model-conf]], the `opts` map
+  also needs the following:
+
+  * **:id-key** a function that takes a key as input and returns a feature set
+  * **:anon-by-id-fn** is a function that takes a single integer argument of the
+  annotation to retrieve by ID
+  * **:anons-fn** is a function that retrieves all annotations
+
+
+## Example
+
+```
+(with-two-pass (create-model-config)
+    (if true
+      {:id-key sf/id-key
+       :anon-by-id-fn #(->> % adb/anon-by-id :instance)
+       :anons-fn adb/anons})
+  (with-feature-context (sf/create-context :anons-fn adb/anons
+                                           :set-type :train-test)
+    (ec/terse-results [:j48] :set-test-two-pass :only-stats? true)))
+```
+
+See a [working example](https://github.com/plandes/clj-example-nlp-ml/blob/master/src/clojure/zensols/example/sa_tp_eval.clj)
+for a more comprehensive code listing."
+  {:style/indent 2}
+  [model-conf opts & forms]
+  `(let [opts# (eval ~opts)]
+     (if-not (eval opts#)
+       (exc/with-model-conf ~model-conf
+         ~@forms)
+       (let [id-key# (:id-key opts#)
+             anon-by-id-fn# (:anon-by-id-fn opts#)
+             anons-fn# (:anons-fn opts#)
+             model-conf# (two-pass-model ~model-conf id-key#
+                                         anon-by-id-fn# anons-fn#)]
+         (binding [weka/*missing-values-ok* true
+                   cl/*cross-val-fns* {:train-fn two-pass-train-instances
+                                       :test-fn two-pass-test-instances}]
+           (exc/with-model-conf model-conf#
+             ~@forms))))))
