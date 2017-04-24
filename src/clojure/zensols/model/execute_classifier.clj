@@ -95,6 +95,8 @@ docs](https://github.com/plandes/clj-ml-model)."
   ([] (model-classifier-feature-types nil))
   ([context]
    (let [model-conf (model-config)
+         ;; TODO: move to eval-classifier since that's where they're defined
+         ;; and accessed with the exception of this function
          id-key (-> model-conf :two-pass-config :id-key)
          feature-metas-fn (:feature-metas-fn model-conf)]
      (->> (if context

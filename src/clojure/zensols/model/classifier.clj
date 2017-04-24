@@ -403,19 +403,19 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
   (binding [*get-data-fn* #(identity train-instances)]
     (let [trained-count (.numInstances test-instances)
           tested-count (.numInstances train-instances)]
-     (->> feature-meta-sets
-          (map #(map name %))
-          (map (fn [attribs]
-                 (log/debugf "classifier: %s, attribs: %s"
-                             classifier (pr-str attribs))
-                 (train-classifier classifier attribs)
-                 (-> (test-classifier classifier attribs
-                                      train-instances test-instances)
-                     (eval-to-results attribs classifier)
-                     (assoc :instances-trained trained-count
-                            :instances-tested tested-count
-                            :instances-total (+ trained-count tested-count)))))
-          doall))))
+      (->> feature-meta-sets
+           (map #(map name %))
+           (map (fn [attribs]
+                  (log/debugf "classifier: %s, attribs: %s"
+                              classifier (pr-str attribs))
+                  (train-classifier classifier attribs)
+                  (-> (test-classifier classifier attribs
+                                       train-instances test-instances)
+                      (eval-to-results attribs classifier)
+                      (assoc :instances-trained trained-count
+                             :instances-tested tested-count
+                             :instances-total (+ trained-count tested-count)))))
+           doall))))
 
 (defn classify-instance
   "Make predictions for all instances.
