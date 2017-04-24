@@ -86,6 +86,11 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
   validation (see [[cmpile-results]])."
   10)
 
+(def ^:dynamic *rand-fn*
+  "A function that returns a `java.util.Random` used to randomize the
+  train/test dataset."
+  (fn [] (java.util.Random. (System/currentTimeMillis))))
+
 (def ^:dynamic *operation-write-instance-fns*
   "A map with valus of functions that are called that return a `java.util.File`
   for an operation represented by the respective key.  An ARFF file is created
@@ -246,9 +251,6 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
   []
   (apply *get-data-fn* nil))
 
-(def ^:dynamic *rand-fn*
-  (fn [] (java.util.Random. (System/currentTimeMillis))))
-
 (defn- cross-validate
   "Invoke the Weka wrapper to cross validate.
 
@@ -260,6 +262,7 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
    (log/debugf "cross validate instances: no-clone: %s, weka: %s"
                *cross-val-fns* (.getClass insts))
    (let [two-pass-validation? (not (nil? *cross-val-fns*))
+         _ (log/debugf "using two-pass validation: %s" two-pass-validation?)
          eval (if two-pass-validation?
                 (NoCloneInstancesEvaluation. insts)
                 (Evaluation. insts))]
@@ -292,8 +295,11 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
                   (type unfiltered))
       (letfn [(attrib-by-name [aname]
                 (or (.attribute unfiltered aname)
-                    (throw (ex-info (str "Unknown attribute: " aname)
-                                    {:name aname}))))]
+                    (-> (str "Unknown attribute: " aname)
+                        (ex-info {:name aname
+                                  :instance-attributes (weka/attributes-for-instances unfiltered)
+                                  :attributes attributes})
+                        throw)))]
         (.setInvertSelection filter true)
         (.setAttributeIndicesArray
          filter

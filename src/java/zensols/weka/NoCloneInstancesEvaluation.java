@@ -5,6 +5,7 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import weka.classifiers.Evaluation;
+import weka.classifiers.CostMatrix;
 import weka.core.Instances;
 
 /**
@@ -27,7 +28,17 @@ public class NoCloneInstancesEvaluation extends Evaluation {
 
     public NoCloneInstancesEvaluation(Instances inst) throws Exception {
 	super(inst);
+	init();
 	m_delegate = new NoCloneInstancesEvaluationDelegate(inst, this);
+    }
+
+    public NoCloneInstancesEvaluation(Instances inst, CostMatrix costMatrix) throws Exception {
+	super(inst);
+	init();
+	m_delegate = new NoCloneInstancesEvaluationDelegate(inst, costMatrix, this);
+    }
+
+    private void init() {
 	m_trainInstances = new java.util.LinkedList();
 	m_testInstances = new java.util.LinkedList();
     }
@@ -38,5 +49,9 @@ public class NoCloneInstancesEvaluation extends Evaluation {
 
     public List getTestInstances() {
 	return m_testInstances;
+    }
+
+    public weka.classifiers.evaluation.Evaluation getDelegate() {
+	return m_delegate;
     }
 }

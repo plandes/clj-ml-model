@@ -5,7 +5,8 @@ and [[zensols.model.execute-classifier]]."
     zensols.model.weka
   (:import [com.zensols.weka IFnClassifier])
   (:require [clojure.tools.logging :as log]
-            [clojure.string :as str])
+            [clojure.string :as str]
+            [clojure.set :refer (intersection difference)])
   (:import (weka.core Attribute Instance DenseInstance Instances FastVector))
   (:import (weka.core.converters ArffLoader ConverterUtils$DataSink))
   (:import (weka.classifiers Classifier Evaluation))
@@ -156,7 +157,7 @@ and [[zensols.model.execute-classifier]]."
                                    {:value val}))
                    (double val))
          boolean (double (if val 1 0))
-         string (if (nil? val) "" val))))))
+         (nominal string) (if (nil? val) "" val))))))
 
 (defn attribute-by-name
   "Return a `weka.core.Attribute` instance by name from a
@@ -168,21 +169,33 @@ and [[zensols.model.execute-classifier]]."
                           att))
                       (enumeration-seq (.enumerateAttributes instances))))))
 
+(defn- attrib-meta [attrib]
+  {:name (.name attrib)
+   :key (keyword (.name attrib))
+   :type (cond (= (.type attrib) Attribute/DATE) 'date
+               (= (.type attrib) Attribute/NOMINAL) 'nominal
+               (= (.type attrib) Attribute/NUMERIC) 'numeric
+               (= (.type attrib) Attribute/STRING) 'string
+               true nil)
+   :attrib attrib})
+
 (defn attributes-for-instances
   "Return a map with **:name** and **:type** for each attribute in an
   `weka.core.Instances`."
-  [insts]
-  (->> (enumeration-seq (.enumerateAttributes insts))
-       (map (fn [attrib]
-              {:name (.name attrib)
-               :type (case (.type attrib)
-                       Attribute/DATE 'date
-                       Attribute/NOMINAL 'nominal
-                       Attribute/NUMERIC 'numeric
-                       Attribute/STRING 'string
-                       nil)}))
-       (sort (fn [a b]
-               (compare (:name a) (:name b))))))
+  [insts & {:keys [sort?]
+            :or {sort? true}}]
+  (->> (.enumerateAttributes insts)
+       enumeration-seq
+       (map attrib-meta)
+       ((fn [data]
+          (if-not sort?
+            data
+            (sort (fn [a b]
+                    (compare (:name a) (:name b)))
+                  data))))))
+
+(defn- class-attribute [insts]
+  (->> insts .classIndex (.attribute insts)))
 
 (defn- new-instances
   "Generate new a map that has a new Instances instance along with all the
@@ -355,32 +368,6 @@ and [[zensols.model.execute-classifier]]."
           (.add insts inst))))
     insts))
 
-(defn map-merge-instances
-  "Merges two sets of Instances together. The resulting set will have all the
-  attributes of the first set plus all the attributes of the second set.
-
-  * **src** a `weka.core.Instances` containing the first part to be merged
-
-  * **attrib-metas** list of maps with each map having:
-      * `:attrib` => `weka.core.Attribute`
-      * `:key` => keyword attribute name
-      * `:type` => same type as described in [[create-attrib]]
-
-  * **instance-val-fn** a function called with a single unique identifier used
-  to add to the result, which makes the second part of the combined merged
-  result"
-  [src attrib-metas instance-val-fn]
-  (log/debugf "merge with attribs: %s" attrib-metas)
-  (let [features-sets (map (fn [idx]
-                             (instance-val-fn (.instance src idx)))
-                           (range (.numInstances src)))
-        dst (create-instances "merged" features-sets attrib-metas nil false)
-        class-attrib (.classAttribute src)
-        merged (weka.core.Instances/mergeInstances src dst)]
-    (if class-attrib (.setClass merged class-attrib))
-    (log/debugf "class: %s" class-attrib)
-    merged))
-
 (defn- find-missing-nominals
   "Some classifiers can't deal with missing nominals.  Weka gives a nasty
   exception if this happens, so detect this (pretty common) mistake before it
@@ -422,7 +409,7 @@ and [[zensols.model.execute-classifier]]."
 
   Parameters
   ----------
-  * **inst** an instance of `weka.core.Instances` (note the whole dataset)
+  * **inst** an (object) instance of `weka.core.Instances` (the whole dataset)
 
   Keys
   ----
@@ -433,12 +420,15 @@ and [[zensols.model.execute-classifier]]."
 
   * **test-fn** just like **train-fn** but used to create the test data set and
   it doesn't take the `java.util.Random` instance"
-  [inst & {:keys [train-fn test-fn randomize-fn]}]
+  [inst & {:keys [train-fn test-fn randomize-fn] :as opts}]
+  (log/infof "wrapping instance of type %s" (class inst))
   (let [train-state (atom nil)]
     (proxy [Instances] [inst]
       (randomize [rand]
         (log/infof "randominzing: %s with fn=%s" rand randomize-fn)
-        (if randomize-fn (randomize-fn rand)))
+        (if randomize-fn
+          (randomize-fn rand)
+          (proxy-super randomize rand)))
       (trainCV [folds fold rand]
         (log/debugf "folds: %d, fold no: %d" folds fold)
         (let [res (proxy-super trainCV folds fold rand)]
@@ -450,7 +440,9 @@ and [[zensols.model.execute-classifier]]."
         (let [res (proxy-super testCV folds fold)]
           (if test-fn
             (test-fn res train-state inst folds fold)
-            res))))))
+            res))))
+    ;(Instances. inst)
+    ))
 
 (defn instances
   "Create a new `weka.core.Instances` instance.
@@ -515,6 +507,72 @@ and [[zensols.model.execute-classifier]]."
     (.setAttributeIndicesArray remove-filter (into-array Integer/TYPE indexes))
     (.setInputFormat remove-filter inst)
     (Filter/useFilter inst remove-filter)))
+
+(defn populate-instances
+  [insts feature-metas data-maps]
+  (let [feature-metas (->> insts
+                           attributes-for-instances
+                           (map #(-> % :name keyword))
+                           (select-keys feature-metas))
+        attrib-metas (->> (attributes-for-instances insts)
+                          (cons (-> insts class-attribute attrib-meta)))]
+    (->> (map (fn [inst data-map]
+                (populate-instance inst data-map attrib-metas))
+              insts data-maps)
+         doall)
+    insts))
+
+(defn map-merge-instances
+  "Merges two sets of Instances together. The resulting set will have all the
+  attributes of the first set plus all the attributes of the second set.
+
+  * **src** a `weka.core.Instances` containing the first part to be merged
+
+  * **feature-metas** a map of key/value pairs describing the features (they
+  become `weka.core.Attribute`s) where the values are described as types
+  in [[create-attrib]]
+
+  * **attrib-metas** list of maps with each map having:
+      * `:attrib` => `weka.core.Attribute`
+      * `:key` => keyword attribute name
+      * `:type` => same type as described in [[create-attrib]]
+
+  * **instance-val-fn** a function called with a single unique identifier used
+  to add to the result, which makes the second part of the combined merged
+  result"
+  [src attrib-metas instance-val-fn]
+  (log/debugf "merge with attribs: %s" attrib-metas)
+  (letfn [(attrib-name-set [inst]
+            (->> (attributes-for-instances inst) (map :name) set))]
+    (let [features-sets (map (fn [idx]
+                               (instance-val-fn (.instance src idx)))
+                             (range (.numInstances src)))
+          dst (create-instances "merged" features-sets attrib-metas nil false)
+          class-attrib (.classAttribute src)
+          _ (log/debugf "counts: src=%d, dst=%d"
+                        (.numInstances src) (.numInstances dst))
+          ;_ (reset! x [src dst])
+          ;; common-attribs (->> [src dst]
+          ;;                     (map #(->> % attributes-for-instances (map :name) set))
+          ;;                     (apply intersection))
+          ;; src-attribs (attrib-name-set src)
+          ;; _ (reset! x [src-attribs (attrib-name-set dst)])
+          ;; dst (->> (attrib-name-set dst)
+          ;;          (difference src-attribs)
+          ;;          (remove-attributes dst))
+          ;; _ (log/infof "src attributes: %s" (attrib-name-set src))
+          ;; _ (log/infof "dst attributes: %s" (attrib-name-set dst))
+          ;; _ (->> [src dst]
+          ;;          (map (fn [inst]
+          ;;                 (let [rid (->> (attributes-for-instances inst)
+          ;;                                (map :name)
+          ;;                                set
+          ;;                                (#(difference % common-attribs)))]
+          ;;                   (remove-attributes inst rid)))))
+          merged (weka.core.Instances/mergeInstances src dst)]
+      (if class-attrib (.setClass merged class-attrib))
+      (log/debugf "class: %s" class-attrib)
+      merged)))
 
 (defmacro let-classifier
   "fnspec ==> (classifier-name [insts] exprs)

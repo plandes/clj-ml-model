@@ -16,7 +16,8 @@
   :source-paths ["src/clojure"]
   :java-source-paths ["src/java"]
   :javac-options ["-Xlint:unchecked"]
-  :exclusions [nz.ac.waikato.cms.weka/weka-dev]
+  :exclusions [nz.ac.waikato.cms.weka/weka-dev
+               com.github.fommil.netlib/core]
   :dependencies [[org.clojure/clojure "1.8.0"]
 
                  ;; command line
@@ -35,6 +36,10 @@
 
                  ;; ML
                  [nz.ac.waikato.cms.weka/weka-stable "3.8.1"]
+                 ;; [nz.ac.waikato.cms.weka/weka-stable "3.8.1"
+                 ;;  :exclusions [nz.ac.waikato.cms.weka/weka-dev com.github.fommil.netlib/core]]
+
+                 ;[com.github.fomil.netlib/all "1.1.2"]
 
                  ;; classifiers are separate deps starting with 3.7
                  [nz.ac.waikato.cms.weka/ridor "1.0.2"]

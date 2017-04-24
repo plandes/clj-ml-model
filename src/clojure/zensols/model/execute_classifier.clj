@@ -31,7 +31,8 @@ docs](https://github.com/plandes/clj-ml-model)."
   * **:create-feature-sets-fn** function creates a sequence of maps with each
   map having key/value pairs of the features of the model to be populated; it
   is passed with optional keys:
-      * **:set-type** the data set type: `:test` or `:train`, which uses the [data set library](https://plandes.github.io/clj-ml-dataset/codox/zensols.dataset.db.html#var-instances)
+      * **:set-type** the data set type: `:test` or `:train`, which uses the
+      [data set library](https://plandes.github.io/clj-ml-dataset/codox/zensols.dataset.db.html#var-instances)
       convention for easy integration
 
   * **:create-features-fn** just like **create-feature-sets-fn** but creates a
@@ -91,10 +92,19 @@ docs](https://github.com/plandes/clj-ml-model)."
 
 (defn model-classifier-feature-types
   "Return the feature metadatas from the model config."
-  []
-  (let [model-conf (model-config)]
-    (->> ((:feature-metas-fn model-conf))
-         (into {}))))
+  ([] (model-classifier-feature-types nil))
+  ([context]
+   (let [model-conf (model-config)
+         id-key (-> model-conf :two-pass-config :id-key)
+         feature-metas-fn (:feature-metas-fn model-conf)]
+     (->> (if context
+            (feature-metas-fn context)
+            (feature-metas-fn))
+          ((fn [metas]
+             (if id-key
+               (cons [(-> id-key name keyword) 'string] metas)
+               metas)))
+          (into {})))))
 
 (defn- create-instances
   "Create the weka Instances object using sets of features created from
@@ -122,7 +132,8 @@ docs](https://github.com/plandes/clj-ml-model)."
     (assert cross-fold-instances-inst
             "No :cross-fold-instances-inst atom set on model configuration")
     (swap! cross-fold-instances-inst
-           #(or % (create-instances (create-feature-sets-fn))))))
+           #(or % (->> (create-feature-sets-fn :set-type :train-test)
+                       create-instances)))))
 
 (defn train-test-instances
   "Called by [[eval-classifier]] to create the data set for cross validation.
