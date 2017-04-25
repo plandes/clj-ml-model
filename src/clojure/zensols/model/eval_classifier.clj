@@ -168,6 +168,7 @@ validation (see [[with-two-pass]])."
     :class-type (second class-feat)}))
 
 (declare two-pass-config)
+(declare executing-two-pass?)
 
 (defn- cross-validate-results
   "Cross validate several models in series.
