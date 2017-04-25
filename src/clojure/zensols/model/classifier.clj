@@ -287,30 +287,13 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
   "Create a filtered data set (`weka.core.Instances`) from unfiltered Instances.
   Paramater **attributes** is a set of string attribute names."
   [unfiltered attributes]
-  (if-not attributes
-    unfiltered
-    (let [filter (Remove.)]
-      (log/debugf "attributes: %s, insts: %s"
-                  (str/join ", " attributes)
-                  (type unfiltered))
-      (letfn [(attrib-by-name [aname]
-                (or (.attribute unfiltered aname)
-                    (-> (str "Unknown attribute: " aname)
-                        (ex-info {:name aname
-                                  :instance-attributes (weka/attributes-for-instances unfiltered)
-                                  :attributes attributes})
-                        throw)))]
-        (.setInvertSelection filter true)
-        (.setAttributeIndicesArray
-         filter
-         (int-array
-          (map #(.index (attrib-by-name %))
-               (concat (if *class-feature-meta* [*class-feature-meta*])
-                       attributes))))
-        (.setInputFormat filter unfiltered)
-        (let [data (Filter/useFilter unfiltered filter)]
-          (set-classify-attrib data)
-          data)))))
+  (let [aid (weka/value unfiltered 0 "aid")
+        data (weka/remove-attributes unfiltered attributes :invert-selection? true)]
+    (log/debugf "attributes: %s"
+                (->> (weka/attributes-for-instances data)
+                     (map #(-> % :name symbol))
+                     pr-str))
+    data))
 
 (defn- cross-validate-evaluation
   "Perform a cross validation using **classifier** on **data** Instances.

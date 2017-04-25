@@ -465,9 +465,10 @@ and [[zensols.model.execute-classifier]]."
   "Merge two instances row wise by adding dst to src."
   [src dst]
   (let [res (clone-instances src)]
-    (->> (.enumerateInstances dst)
-         enumeration-seq
-         (.addAll res))
+    (if (< 0 (.numInstances dst))
+      (->> (.enumerateInstances dst)
+           enumeration-seq
+           (.addAll res)))
     res))
 
 (defn- index-for-attribute
@@ -477,21 +478,40 @@ and [[zensols.model.execute-classifier]]."
   (let [attrib (attribute-by-name inst name)]
     (if attrib (.index attrib))))
 
+(defn value
+  "Return the value for instance **n** in `core.weka.Instance` **insts** with
+  attribute of **name**."
+  [insts n name]
+  (let [inst (.instance insts n)
+        attribs (attributes-for-instances inst)
+        {:keys [type attrib]} (->> attribs (some #(and (= name (:name %)) %)))]
+    (if (= 'string type)
+      (.stringValue inst attrib)
+      (.value inst attrib))))
+
 (defn remove-attributes
   "Remove a set of attributes from **inst** (`weka.core.Instances`) by
   string (string) name."
-  [inst attrib-names]
-  (let [remove-filter (Remove.)
-        indexes (doall (map #(index-for-attribute inst %) attrib-names))]
-    (if-not (empty? (filter nil? indexes))
-      (throw (ex-info (format "indexes: %s=>%s"
-                              (str/join ", " attrib-names)
-                              (str/join ", " indexes))
-                      {:attrib-names attrib-names
-                       :indexes indexes})))
-    (.setAttributeIndicesArray remove-filter (into-array Integer/TYPE indexes))
-    (.setInputFormat remove-filter inst)
-    (Filter/useFilter inst remove-filter)))
+  [inst attrib-names & {:keys [invert-selection?]}]
+  (if (and (nil? invert-selection?) (empty? attrib-names))
+    inst
+    (let [remove-filter (Remove.)
+          attrib-names (if invert-selection?
+                         (->> inst attributes-for-instances (map :name) set
+                              (#(clojure.set/difference % (set attrib-names))))
+                         attrib-names)
+          indexes (doall (map #(index-for-attribute inst %) attrib-names))]
+      (if-not (empty? (filter nil? indexes))
+        (throw (ex-info (format "indexes: %s=>%s"
+                                (str/join ", " attrib-names)
+                                (str/join ", " indexes))
+                        {:attrib-names attrib-names
+                         :indexes indexes})))
+      (.setAttributeIndicesArray remove-filter (into-array Integer/TYPE indexes))
+      (.setInputFormat remove-filter inst)
+      ;; (if invert-selection?
+      ;;   (.setInvertSelection remove-filter true))
+      (Filter/useFilter inst remove-filter))))
 
 (defn populate-instances
   "Populate a `weka.core.Instances` instance Clojure data structures.

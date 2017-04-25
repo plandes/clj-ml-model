@@ -167,6 +167,8 @@ validation (see [[with-two-pass]])."
     :class-key (first class-feat)
     :class-type (second class-feat)}))
 
+(declare two-pass-config)
+
 (defn- cross-validate-results
   "Cross validate several models in series.
 
@@ -187,9 +189,23 @@ validation (see [[with-two-pass]])."
           instances (exc/cross-fold-instances)
           num-inst (.numInstances instances)
           folds cl/*cross-fold-count*]
-      (log/debugf "number of instances: %d, feature-meta-set: <%s>"
-                  num-inst (pr-str feature-meta-sets))
+      (log/debugf "number of instances: %d, feature-meta-set: <%s>, attribs: %s"
+                  num-inst (pr-str feature-meta-sets)
+                  (->> (weka/attributes-for-instances instances)
+                       (map :name)
+                       pr-str))
       (log/tracef "instances class: %s" (-> instances .getClass .getName))
+      (if-let [id-val (if (and (executing-two-pass?)
+                               (> (.numInstances instances) 0))
+                        (->> (two-pass-config)
+                             :id-key
+                             name
+                             (weka/value instances 0)))]
+        (if (= "?" id-val)
+          (-> (format "Key not set yet for two pass cross validation: %s"
+                      (.instance instances 0))
+              (ex-info {:instance (.instance instances 0)})
+              throw)))
       (if (<= num-inst folds)
         (throw (ex-info "Not enough folds"
                         {:num-inst num-inst
@@ -549,7 +565,7 @@ validation (see [[with-two-pass]])."
   (log/infof "training set: %d, org=%d"
               (.numInstances insts)
               (.numInstances org))
-  (let [{:keys [create-context-fn create-feature-sets-fn]} (model-config)
+  (let [{:keys [create-two-pass-context-fn create-feature-sets-fn]} (model-config)
         _ (assert create-feature-sets-fn)
         tpconf (two-pass-config)
         _ (assert tpconf)
@@ -563,10 +579,12 @@ validation (see [[with-two-pass]])."
         _ (log/infof "training %d instances for fold %d of %d"
                      (count anon-ids) (inc fold) folds)
         _ (log/debugf "anon-ids: %d instances" (count anon-ids))
-        _ (log/debugf "maybe invoking create context with: %s" create-context-fn)
+        _ (log/debugf "maybe invoking create context with: %s"
+                      create-two-pass-context-fn)
         _ (log/tracef "ids: <%s>" (s/join ", " anon-ids))
-        context (if create-context-fn
-                  (create-context-fn :anons-fn anons-fn :id-set anon-ids))
+        context (if create-two-pass-context-fn
+                  (create-two-pass-context-fn :anons-fn anons-fn
+                                              :id-set anon-ids))
         feature-metas (if context
                         (exc/model-classifier-feature-types context)
                         exc/model-classifier-feature-types)
@@ -653,7 +671,10 @@ validation (see [[with-two-pass]])."
   * **:anon-by-id-fn** is a function that takes a single integer argument of the
   annotation to retrieve by ID
   * **:anons-fn** is a function that retrieves all annotations
-
+  * **:create-two-pass-context-fn** like `:create-context-fn`, as documented
+  in [[zensols.model.execute-classifier/with-model-conf]] but called for two
+  pass cross validation; this allows a more general context and a specific two
+  pass context to be created for the unique needs of the model
 
   ## Example
 
