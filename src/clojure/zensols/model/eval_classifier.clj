@@ -15,11 +15,6 @@ validation (see [[with-two-pass]])."
             [zensols.model.weka :as weka]
             [zensols.model.classifier :as cl]))
 
-(def ^:dynamic *cross-fold-count*
-  "The default number of folds to use during cross fold
-  validation (see [[cmpile-results]])."
-  10)
-
 (def ^:dynamic *default-set-type*
   "The default type of test, which is one of:
 
@@ -145,7 +140,7 @@ validation (see [[with-two-pass]])."
               (pr-str classifiers) (pr-str attribs-sets))
   (letfn [(cr-test [classifier attribs]
             (try
-              (log/infof "classifier: %s, %s" classifier (pr-str attribs))
+              (log/infof "classifier: <%s>, %s" classifier (pr-str attribs))
               (let [res (cl/cross-validate-tests classifier (map name attribs))]
                 (log/debug (with-out-str (cl/print-results res)))
                 res)
@@ -182,7 +177,7 @@ validation (see [[with-two-pass]])."
                                               feature-sets-key))
           instances (exc/cross-fold-instances)
           num-inst (.numInstances instances)
-          folds *cross-fold-count*]
+          folds cl/*cross-fold-count*]
       (log/debugf "number of instances: %d, feature-metas: <%s>"
                   num-inst (pr-str feature-meta-sets))
       (log/tracef "instances class: %s" (-> instances .getClass .getName))
@@ -191,8 +186,7 @@ validation (see [[with-two-pass]])."
                         {:num-inst num-inst
                          :folds folds}))
         (binding [cl/*get-data-fn* #(identity instances)
-                  cl/*class-feature-meta* (name classifier-attrib)
-                  cl/*cross-fold-count* folds]
+                  cl/*class-feature-meta* (name classifier-attrib)]
           (->> classifier-sets
                (map #(cross-validate-results-struct
                       (weka/make-classifiers %) feature-meta-sets))
@@ -271,16 +265,14 @@ validation (see [[with-two-pass]])."
   * weighted F-measure
   * feature-metas
 
-  Parameters
-  ----------
   * **classifier-sets** is a key in [[zensols.model.weka/*classifiers*]] or a
   constructed classifier (see [[zensols.model.weka/make-classifiers]])
 
   * **feature-sets-key** identifies what feature set (see
   **:feature-sets-set** in [[zensols.model.execute-classifier/with-model-conf]])
 
-  Keys
-  ----
+  ## Keys
+
   * **:only-stats?** if `true` only return statistic data
 
   See [[*throw-cross-validate*]]."
@@ -350,7 +342,9 @@ validation (see [[with-two-pass]])."
       (cl/train-classifier classifier attribs)
       model)))
 
-(defn- model-persist-name []
+(defn- model-persist-name
+  "Return the name of the model of the model configuration."
+  []
   (:name (model-config)))
 
 (defn write-model
@@ -608,7 +602,7 @@ validation (see [[with-two-pass]])."
   with [[zensols.model.execute-classifier/with-model-conf]].
 
 
-## Description
+  ## Description
 
   Two pass validation is a term used in this library.  During cross-validation
   the entire data set is evaluated and (usually) statistics or some other
@@ -628,12 +622,19 @@ validation (see [[with-two-pass]])."
   a feature).  This key is then given to a function during validation to get
   the corresponding feature set that is to be *stitched* in.
 
+  **Note** This is *only* useful if:
 
-## Option Keys
+  1. You want to use cross fold validation to test your model.
+  2. Your model priors (*context* in implementation parlance) is composed of
+     the dataset preproessing, and thus, needed to get reliable performance
+     metrics.
+
+
+  ## Option Keys
 
   In addition to all keys documented
-  in [[zensols.model.execute-classifier/with-model-conf]], the `opts` map
-  also needs the following:
+  in [[zensols.model.execute-classifier/with-model-conf]], the **opts** param
+  is a map that also needs the following key/value pairs:
 
   * **:id-key** a function that takes a key as input and returns a feature set
   * **:anon-by-id-fn** is a function that takes a single integer argument of the
@@ -641,10 +642,10 @@ validation (see [[with-two-pass]])."
   * **:anons-fn** is a function that retrieves all annotations
 
 
-## Example
+  ## Example
 
-```
-(with-two-pass (create-model-config)
+  ```
+  (with-two-pass (create-model-config)
     (if true
       {:id-key sf/id-key
        :anon-by-id-fn #(->> % adb/anon-by-id :instance)
@@ -652,10 +653,10 @@ validation (see [[with-two-pass]])."
   (with-feature-context (sf/create-context :anons-fn adb/anons
                                            :set-type :train-test)
     (ec/terse-results [:j48] :set-test-two-pass :only-stats? true)))
-```
+  ```
 
-See a [working example](https://github.com/plandes/clj-example-nlp-ml/blob/master/src/clojure/zensols/example/sa_tp_eval.clj)
-for a more comprehensive code listing."
+  See a [working example](https://github.com/plandes/clj-example-nlp-ml/blob/master/src/clojure/zensols/example/sa_tp_eval.clj)
+  for a more comprehensive code listing."
   {:style/indent 2}
   [model-conf opts & forms]
   `(let [opts# (eval ~opts)]

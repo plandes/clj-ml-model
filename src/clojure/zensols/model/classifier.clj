@@ -474,7 +474,7 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
          (merge
           ;; we can't add :eval since currently Evaluation isn't serializable
           (select-keys res [:accuracy :wprecision :wrecall :wfmeasure
-                            :kappa :rmse :classifier :classify-attrib
+                            :kappa :rmse :classifier :classify-attrib :eval
                             :instances-total :instances-correct
                             :instances-incorrect :instances-trained :instances-tested])
           {:feature-metas (map keyword (-> res :feature-metas))
@@ -537,7 +537,7 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
           (excel/save out-file))
       (log/infof "wrote results file: %s" out-file))))
 
-(defn- print-eval-results
+(defn print-eval-results
   "Print the results, confusion matrix and class details to standard out of a
   `weka.core.Evalution`."
   [eval]

@@ -197,16 +197,18 @@ docs](https://github.com/plandes/clj-ml-model)."
   "Print informtation from a (usually serialized) model.  This data includes
   performance metrics, the classifier, features used to create the model and
   the context (see [[zensols.model.execute-classifier]])."
-  [model & {:keys [metrics? features? classifier? context?]
+  [model & {:keys [metrics? features? classifier? context? results?]
             :or {metrics? true
                  features? true
-                 classifier? true
-                 context? true}}]
+                 classifier? false
+                 context? false
+                 results? true}}]
   (when metrics?
-    (doseq [key [:instances-total :instances-correct :instances-incorrect
-                 :instances-trained :name :create-time
+    (doseq [key [:name :create-time :instances-total :instances-correct :instances-incorrect
                  :accuracy :wprecision :wrecall :wfmeasure]]
       (println (format "%s: %s" (name key) (get model key)))))
+  (when results?
+    (cl/print-eval-results (:eval model)))
   (when features?
     (println "features:")
     (println (:feature-metas model)))
