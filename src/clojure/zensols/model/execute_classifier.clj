@@ -11,11 +11,10 @@ docs](https://github.com/plandes/clj-ml-model)."
   (:use [clojure.java.io :as io :only [input-stream output-stream file]])
   (:use [clojure.pprint :only [pprint]])
   (:require [clojure.tools.logging :as log]
-            [clojure.string :as str]
+            [clojure.string :as s]
             [clojure.data.csv :as csv])
   (:require [zensols.tabres.display-results :as dr])
   (:require [zensols.actioncli.resource :refer (resource-path)]
-            [zensols.util.spreadsheet :as ss]
             [zensols.model.classifier :as cl]
             [zensols.model.weka :as weka]))
 
@@ -197,9 +196,10 @@ docs](https://github.com/plandes/clj-ml-model)."
   "Print informtation from a (usually serialized) model.  This data includes
   performance metrics, the classifier, features used to create the model and
   the context (see [[zensols.model.execute-classifier]])."
-  [model & {:keys [metrics? features? classifier? context? results?]
+  [model & {:keys [metrics? attributes? features? classifier? context? results?]
             :or {metrics? true
-                 features? true
+                 attributes? true
+                 features? false
                  classifier? false
                  context? false
                  results? true}}]
@@ -207,6 +207,11 @@ docs](https://github.com/plandes/clj-ml-model)."
     (doseq [key [:name :create-time :instances-total :instances-correct :instances-incorrect
                  :accuracy :wprecision :wrecall :wfmeasure]]
       (println (format "%s: %s" (name key) (get model key)))))
+  (when attributes?
+    (->> (:attributes model)
+         (map name)
+         (s/join ", ")
+         (println "attributes:")))
   (when results?
     (cl/print-eval-results (:eval model)))
   (when features?
@@ -402,3 +407,17 @@ docs](https://github.com/plandes/clj-ml-model)."
             (cons col-names)
             (csv/write-csv writer)))
      (log/infof "wrote predictions to %s" file))))
+
+(defn write-confusion-matrix
+  [model output-file]
+  (let [{:keys [class-type]} (:feature-metadata model)
+        confusion-matrix (-> model :eval .confusionMatrix)]
+    (with-open [writer (io/writer output-file)]
+      (->> confusion-matrix
+           (map #(into [] (map int %)))
+           (map (fn [class-labels row]
+                  (concat row [class-labels]))
+                class-type)
+           (cons (concat class-type ["predicts"]))
+           (csv/write-csv writer)))
+    (log/infof "wrote predictions to %s" output-file)))

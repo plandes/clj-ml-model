@@ -135,13 +135,14 @@ validation (see [[with-two-pass]])."
 
 (defn- cross-validate-results-struct
   "Create a data structure with cross validation results."
-  [classifiers attribs-sets]
+  [classifiers attribs-sets feature-metadata]
   (log/debugf "cvr struct classifiers=<%s>, attribs=%s"
               (pr-str classifiers) (pr-str attribs-sets))
   (letfn [(cr-test [classifier attribs]
             (try
               (log/infof "classifier: <%s>, %s" classifier (pr-str attribs))
-              (let [res (cl/cross-validate-tests classifier (map name attribs))]
+              (let [res (cl/cross-validate-tests classifier (map name attribs)
+                                                 feature-metadata)]
                 (log/debug (with-out-str (cl/print-results res)))
                 res)
               (catch Exception e
@@ -159,6 +160,13 @@ validation (see [[with-two-pass]])."
          (remove empty?)
          (apply concat))))
 
+(defn- freeze-feature-metadata [model-conf]
+  (let [{:keys [feature-metas-fn class-feature-meta-fn]} model-conf
+        class-feat (class-feature-meta-fn)]
+   {:feature-metas (into {} (feature-metas-fn))
+    :class-key (first class-feat)
+    :class-type (second class-feat)}))
+
 (defn- cross-validate-results
   "Cross validate several models in series.
 
@@ -173,12 +181,13 @@ validation (see [[with-two-pass]])."
     (let [classifier-attrib (first (exc/model-classifier-label))
           feature-meta-sets (get (:feature-sets-set model-conf)
                                  feature-sets-key)
+          feature-metadata (freeze-feature-metadata model-conf)
           _ (assert feature-meta-sets (format "no such feature meta set: <%s>"
                                               feature-sets-key))
           instances (exc/cross-fold-instances)
           num-inst (.numInstances instances)
           folds cl/*cross-fold-count*]
-      (log/debugf "number of instances: %d, feature-metas: <%s>"
+      (log/debugf "number of instances: %d, feature-meta-set: <%s>"
                   num-inst (pr-str feature-meta-sets))
       (log/tracef "instances class: %s" (-> instances .getClass .getName))
       (if (<= num-inst folds)
@@ -189,7 +198,9 @@ validation (see [[with-two-pass]])."
                   cl/*class-feature-meta* (name classifier-attrib)]
           (->> classifier-sets
                (map #(cross-validate-results-struct
-                      (weka/make-classifiers %) feature-meta-sets))
+                      (weka/make-classifiers %)
+                      feature-meta-sets
+                      feature-metadata))
                (apply concat)
                doall))))))
 
@@ -206,6 +217,7 @@ validation (see [[with-two-pass]])."
         classifier-attrib (first (exc/model-classifier-label))
         feature-meta-sets (get (:feature-sets-set model-conf)
                                feature-sets-key)
+        feature-metadata (freeze-feature-metadata model-conf)
         _ (log/debugf "feature meta sets: <%s>"
                       (pr-str feature-meta-sets))
         {train-instances :train test-instances :test}
@@ -227,6 +239,7 @@ validation (see [[with-two-pass]])."
            (map weka/make-classifiers)
            (apply concat)
            (map #(cl/train-test-classifier % feature-meta-sets
+                                           feature-metadata
                                            train-instances test-instances))
            (apply concat)
            doall))))
@@ -286,7 +299,7 @@ validation (see [[with-two-pass]])."
                     (:wfmeasure elt)]
                    (if-not only-stats?
                      [feature-set-key
-                      (:feature-metas elt)])))
+                      (:attributes elt)])))
          res)))
 
 (defn print-best-results
@@ -330,7 +343,7 @@ validation (see [[with-two-pass]])."
   See [[*throw-cross-validate*]]."
   [model & {:keys [set-type] :or {set-type *default-set-type*}}]
   (let [classifier (:classifier model)
-        attribs (map name (:feature-metas model))
+        attribs (map name (:attributes model))
         classify-attrib (first (exc/model-classifier-label))
         instances (by-set-type-instances set-type)]
     (binding [cl/*get-data-fn* #(identity instances)
