@@ -21,7 +21,7 @@
   :dependencies [[org.clojure/clojure "1.8.0"]
 
                  ;; command line
-                 [com.zensols.tools/actioncli "0.0.15"]
+                 [com.zensols.tools/actioncli "0.0.16"]
 
                  ;; dev
                  [com.zensols.gui/tabres "0.0.6"]
@@ -29,24 +29,18 @@
                  ;;; reports
                  [outpace/clj-excel "0.0.2"]
                  [org.clojure/data.csv "0.1.2"]
-                 [com.zensols.tools/misc "0.0.4"]
+                 [com.zensols.tools/misc "0.0.5"]
 
                  ;; model serialization
                  [com.taoensso/nippy "2.13.0"]
 
                  ;; ML
                  [nz.ac.waikato.cms.weka/weka-stable "3.8.1"]
-                 ;; [nz.ac.waikato.cms.weka/weka-stable "3.8.1"
-                 ;;  :exclusions [nz.ac.waikato.cms.weka/weka-dev com.github.fommil.netlib/core]]
 
-                 ;[com.github.fomil.netlib/all "1.1.2"]
-
-                 ;; classifiers are separate deps starting with 3.7
+                 ;; weka classifiers are separate deps starting with 3.7
                  [nz.ac.waikato.cms.weka/ridor "1.0.2"]
                  [nz.ac.waikato.cms.weka/hyperPipes "1.0.1"]
                  [nz.ac.waikato.cms.weka/LibSVM "1.0.10"]
-                 ;; [nz.ac.waikato.cms.weka/LibSVM "1.0.10" :exclusions
-                 ;;  [ch.qos.logback/logback-classic nz.ac.waikato.cms.weka/weka-dev org.slf4j/slf4j-log4j12]]
                  [nz.ac.waikato.cms.weka/conjunctiveRule "1.0.2"]
                  [nz.ac.waikato.cms.weka/NNge "1.0.2"]
                  [nz.ac.waikato.cms.weka/grading "1.0.2"]
