@@ -13,6 +13,31 @@ learning models.  Specifically it:
 * Generate Excel spreadsheet files of multiple run results.
 * Two pass cross validation.
 
+
+## Contents
+
+* [Obtaining](#obtaining)
+* [Documentation](#documentation)
+* [Example](#example)
+* [Usage](#usage)
+  * [Create the Corpus](# create the corpus)
+  * [Create Features](# create features)
+  * [Create the Model Configuration](# create the model configuration)
+  * [Create the Model](# create the model)
+  * [Evaluating the Model](# evaluating the model)
+    * [Creating an ARFF File](## creating an arff file)
+    * [Cross Validation](## cross validation)
+    * [Cross Validation Report](## cross validation report)
+  * [Persist/Save the Model](# persist/save the model)
+  * [Use the Model](# use the model)
+  * [Test the Model](# test the model)
+  * [Automating testing and overfitting](# automating testing and overfitting)
+* [Building](#building)
+* [Changelog](#changelog)
+* [License](#license)
+
+
+
 ## Obtaining
 
 In your `project.clj` file, add:
@@ -22,7 +47,7 @@ In your `project.clj` file, add:
 
 ## Documentation
 
-Additional [documentation](https://plandes.github.io/clj-ml-model/codox/index.html).
+API [documentation](https://plandes.github.io/clj-ml-model/codox/index.html).
 
 
 ## Example
