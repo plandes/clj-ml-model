@@ -7,11 +7,14 @@
 
 This repository provides generalized library to train, test and use machine
 learning models.  Specifically it:
+
 * Wraps [Weka](http://www.cs.waikato.ac.nz/ml/weka/) 3.8.
 * Automation of any combination of classifiers and features.
 * Sort and prints results in many formats and levels of detail.
 * Generate Excel spreadsheet files of multiple run results.
 * Two pass cross validation.
+* Integrates with
+  the [dataset library](https://github.com/plandes/clj-ml-dataset).
 
 
 ## Contents
