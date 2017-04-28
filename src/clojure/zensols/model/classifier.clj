@@ -287,8 +287,7 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
   "Create a filtered data set (`weka.core.Instances`) from unfiltered Instances.
   Paramater **attributes** is a set of string attribute names."
   [unfiltered attributes]
-  (let [aid (weka/value unfiltered 0 "aid")
-        data (weka/remove-attributes unfiltered attributes :invert-selection? true)]
+  (let [data (weka/remove-attributes unfiltered attributes :invert-selection? true)]
     (log/debugf "attributes: %s"
                 (->> (weka/attributes-for-instances data)
                      (map #(-> % :name symbol))
