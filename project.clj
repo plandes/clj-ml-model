@@ -5,11 +5,14 @@
             :url "https://www.apache.org/licenses/LICENSE-2.0"
             :distribution :repo}
   :plugins [[lein-codox "0.10.3"]
+            [lein-javadoc "0.3.0"]
             [org.clojars.cvillecsteele/lein-git-version "1.2.7"]]
   :codox {:metadata {:doc/format :markdown}
           :project {:name "Interface for machine learning modeling, testing and training"}
           :output-path "target/doc/codox"
           :source-uri "https://github.com/plandes/clj-ml-model/blob/v{version}/{filepath}#L{line}"}
+  :javadoc-opts {:package-names ["zensols.weka"]
+                 :output-dir "target/doc/apidocs"}
   :git-version {:root-ns "zensols.model"
                 :path "src/clojure/zensols/model"
                 :version-cmd "git describe --match v*.* --abbrev=4 --dirty=-dirty"}
