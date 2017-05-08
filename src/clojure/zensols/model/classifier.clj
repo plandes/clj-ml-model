@@ -287,7 +287,14 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
   "Create a filtered data set (`weka.core.Instances`) from unfiltered Instances.
   Paramater **attributes** is a set of string attribute names."
   [unfiltered attributes]
-  (let [data (weka/remove-attributes unfiltered attributes :invert-selection? true)]
+  (let [data (weka/remove-attributes unfiltered attributes :invert-selection? true)
+        no-attrib (.numAttributes data)]
+    (if (< no-attrib 2)
+      (-> (format "Need at least two attributes (class and one attribute) but got: %s" no-attrib)
+          (ex-info {:no-attrib no-attrib
+                    :unfiltered unfiltered
+                    :data data})
+          throw))
     (log/debugf "attributes: %s"
                 (->> (weka/attributes-for-instances data)
                      (map #(-> % :name symbol))
@@ -419,7 +426,8 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
   (log/tracef "unlabeled: %s" unlabeled)
   (map (fn [idx]
          (let [unlabeled-inst (.instance unlabeled idx)
-               label (if (:label return-keys)
+               label (when (:label return-keys)
+                       (log/tracef "classifying: %s" unlabeled-inst)
                        (.classifyInstance classifier unlabeled-inst))
                label-val (if label
                            (.value (.classAttribute unlabeled) label))

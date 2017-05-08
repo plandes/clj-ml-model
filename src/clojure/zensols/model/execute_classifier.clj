@@ -176,15 +176,16 @@ docs](https://github.com/plandes/clj-ml-model)."
   [model]
   (binding [weka/*missing-values-ok* true]
     (let [{classifier :classifier
-           feature-metas :feature-metas
+           feature-metadata :feature-metadata
+           attrib-keys :attributes
            classify-attrib :classify-attrib
            context :context} model
+          feature-metas (:feature-metas feature-metadata)
           model-conf (model-config)
-          attrib-keys (keys (keyword feature-metas))
           ;; creates an Instances with a single row/Instance of nulls
           feature-set (zipmap attrib-keys (repeat (count attrib-keys) nil))
           features-set (list feature-set)
-          attribs (map name feature-metas)
+          attribs (map name attrib-keys)
           unfiltered (create-instances features-set context)]
       (binding [cl/*class-feature-meta* (name classify-attrib)]
         (let [instances (cl/filter-attribute-data unfiltered attribs)]
