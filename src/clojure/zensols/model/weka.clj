@@ -410,7 +410,7 @@ and [[zensols.model.execute-classifier]]."
   * **test-fn** just like **train-fn** but used to create the test data set and
   it doesn't take the `java.util.Random` instance"
   [inst & {:keys [train-fn test-fn randomize-fn] :as opts}]
-  (log/infof "wrapping instance of type %s" (class inst))
+  (log/debugf "wrapping instance of type %s" (class inst))
   (let [train-state (atom nil)]
     (proxy [Instances] [inst]
       (randomize [rand]
