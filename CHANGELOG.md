@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## [Unreleased]
 
 
+## [0.0.11] - 2017-05-08
+### Changed
+- Persisted model data usage bug fix.
+- More checking and logging
+
+
 ## [0.0.10] - 2017-04-27
 ### Changed
 - Weka NLP bug fix.
@@ -35,7 +41,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - API documentation creation version bump.
 
 
-[Unreleased]: https://github.com/plandes/clj-ml-model/compare/v0.0.10...HEAD
+[Unreleased]: https://github.com/plandes/clj-ml-model/compare/v0.0.11...HEAD
+[0.0.11]: https://github.com/plandes/clj-ml-model/compare/v0.0.10...v0.0.11
 [0.0.10]: https://github.com/plandes/clj-ml-model/compare/v0.0.9...v0.0.10
 [0.0.9]: https://github.com/plandes/clj-ml-model/compare/v0.0.8...v0.0.9
 [0.0.8]: https://github.com/plandes/clj-ml-model/compare/v0.0.7...v0.0.8
