@@ -556,7 +556,7 @@ validation (see [[with-two-pass]])."
        (map (fn [row]
               (-> insts
                   (.instance row)
-                  (.stringValue id-attrib) Integer/parseInt)))))
+                  (.stringValue id-attrib))))))
 
 (defn two-pass-train-instances
   "Don't use this function--instead, use [[with-two-pass]].
