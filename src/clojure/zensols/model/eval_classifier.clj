@@ -86,9 +86,9 @@ validation (see [[with-two-pass]])."
         class-feature-meta (class-feature-meta-fn)
         adb-keys (if adb-keys
                    (->> (dissoc adb-keys :max)
-                        (into [])))
-        feature-sets (->> adb-keys
-                          (apply create-feature-sets-fn)
+                        (into [])
+                        (apply concat)))
+        feature-sets (->> (apply create-feature-sets-fn adb-keys)
                           (take max))]
     (let [keys (map first (concat (list class-feature-meta) feature-metas))]
       (->> feature-sets
