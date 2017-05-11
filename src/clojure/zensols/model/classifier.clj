@@ -319,7 +319,8 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
    :feature-metadata feature-metadata
    :attributes attribs
    :classifier classifier
-   :classify-attrib (keyword *class-feature-meta*)
+   ;:classify-attrib (keyword *class-feature-meta*)
+   :classify-attrib *class-feature-meta*
 
    ;; evaluation results
    ;; basic stats
@@ -551,7 +552,7 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
       (println (apply str (repeat 70 \-)))
       (print-eval-results (:eval result))
       (println (format "classifier: %s" (.getName (.getClass (:classifier result)))))
-      (println (format "attributes: %s" (str/join ", "(:attribs result))))
+      (println (format "attributes: %s" (str/join ", "(:attributes result))))
       (->> (dissoc result :classifier :feature-metadata :attributes :eval :data)
            (into (sorted-set))
            (map (fn [[k v]]

@@ -209,6 +209,7 @@ docs](https://github.com/plandes/clj-ml-model)."
                  :accuracy :wprecision :wrecall :wfmeasure]]
       (println (format "%s: %s" (name key) (get model key)))))
   (when attributes?
+    (println (format "class: %s" (:classify-attrib model)))
     (->> (:attributes model)
          (map name)
          (s/join ", ")

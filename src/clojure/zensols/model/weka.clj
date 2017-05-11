@@ -85,12 +85,18 @@ and [[zensols.model.execute-classifier]]."
    (log/debugf "making classifiers: %s" set-name-or-instance)
    (if (nil? set-name-or-instance)
      (make-classifiers)
-     (if (instance? weka.classifiers.Classifier set-name-or-instance)
-       (list set-name-or-instance)
-       (map (fn [cl-name]
-              (log/debugf "instantiating classifier: %s" cl-name)
-              (.newInstance (Class/forName cl-name)))
-            (get *classifiers* set-name-or-instance))))))
+     (let [cls (if (instance? weka.classifiers.Classifier set-name-or-instance)
+                 (list set-name-or-instance)
+                 (map (fn [cl-name]
+                        (log/debugf "instantiating classifier: %s" cl-name)
+                        (.newInstance (Class/forName cl-name)))
+                      (get *classifiers* set-name-or-instance)))]
+       (if (empty? cls)
+           (-> (format "No such classifier or classifier set: %s"
+                       set-name-or-instance)
+               (ex-info {:set-name-or-instance set-name-or-instance})
+               throw))
+       cls))))
 
 (defn create-attrib
   "Create a Weka Attribute instance with **att-name**.
