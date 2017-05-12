@@ -395,8 +395,8 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
                              feature-metadata
                              train-instances test-instances]
   (binding [*get-data-fn* #(identity train-instances)]
-    (let [trained-count (.numInstances test-instances)
-          tested-count (.numInstances train-instances)]
+    (let [trained-count (.numInstances train-instances)
+          tested-count (.numInstances test-instances)]
       (->> feature-meta-sets
            (map #(map name %))
            (map (fn [attribs]

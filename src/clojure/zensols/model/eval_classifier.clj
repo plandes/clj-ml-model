@@ -452,8 +452,8 @@ validation (see [[with-two-pass]])."
 
 (defn train-test-series
   "Test and train with different rations and return the results.  The return
-  data writable directly as an Excel file.  However, you can also save it as a
-  CSV with [[write-csv-train-test-series]].
+  data is writable directly as an Excel file.  However, you can also save it as
+  a CSV with [[write-csv-train-test-series]].
 
   The keys are the classifier name and the values are the 2D result matrix.
 
@@ -475,7 +475,8 @@ validation (see [[with-two-pass]])."
                             (binding [*default-set-type* :train-test]
                               (compile-results (list classifier) meta-set))))
                      (apply concat)
-                     (map (fn [res]
+                     (map (fn [{:keys [instances-trained instances-tested] :as res}]
+                            (log/infof "trained: %d, tested: %d" instances-trained instances-tested)
                             (let [name (-> res :classifier cl/classifier-name)]
                               {:name name
                                :stats (map #(get res %) stat-keys)})))
