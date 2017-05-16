@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.12] - 2017-05-16
+### Changed
+- Performance metric repoting bug fixes.
+- Report class label on performance metrics output.
+
+### Added
+- No longer require numeric IDs for two pass cross validation.
+- Classifier creation checking.
+
 
 ## [0.0.11] - 2017-05-08
 ### Changed
@@ -41,7 +50,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - API documentation creation version bump.
 
 
-[Unreleased]: https://github.com/plandes/clj-ml-model/compare/v0.0.11...HEAD
+[Unreleased]: https://github.com/plandes/clj-ml-model/compare/v0.0.12...HEAD
+[0.0.12]: https://github.com/plandes/clj-ml-model/compare/v0.0.11...v0.0.12
 [0.0.11]: https://github.com/plandes/clj-ml-model/compare/v0.0.10...v0.0.11
 [0.0.10]: https://github.com/plandes/clj-ml-model/compare/v0.0.9...v0.0.10
 [0.0.9]: https://github.com/plandes/clj-ml-model/compare/v0.0.8...v0.0.9
