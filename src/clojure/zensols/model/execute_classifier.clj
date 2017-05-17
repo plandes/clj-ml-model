@@ -410,16 +410,30 @@ docs](https://github.com/plandes/clj-ml-model)."
             (csv/write-csv writer)))
      (log/infof "wrote predictions to %s" file))))
 
+(defn confusion-matrix-file
+  "Return the default file used to create a confusion matrix spreadsheet file
+  with [[write-confusion-model]]."
+  [model]
+  (io/file (cl/analysis-report-resource)
+           (format "%s-confusion-matrix.csv" (:name model))))
+
 (defn write-confusion-matrix
-  [model output-file]
-  (let [{:keys [class-type]} (:feature-metadata model)
-        confusion-matrix (-> model :eval .confusionMatrix)]
-    (with-open [writer (io/writer output-file)]
-      (->> confusion-matrix
-           (map #(into [] (map int %)))
-           (map (fn [class-labels row]
-                  (concat row [class-labels]))
-                class-type)
-           (cons (concat class-type ["predicts"]))
-           (csv/write-csv writer)))
-    (log/infof "wrote predictions to %s" output-file)))
+  "Write the confusion matrix in **model**.
+
+  * **model** a model created
+  from [[zensols.model.eval-classifier/train-model]] or [[read-model]]"
+  ([model]
+   (write-confusion-matrix model (confusion-matrix-file)))
+  ([model output-file]
+   (let [{:keys [class-type]} (:feature-metadata model)
+         confusion-matrix (-> model :eval .confusionMatrix)]
+     (with-open [writer (io/writer output-file)]
+       (->> confusion-matrix
+            (map #(into [] (map int %)))
+            (map (fn [class-labels row]
+                   (concat row [class-labels]))
+                 class-type)
+            (cons (concat class-type ["predicts"]))
+            (csv/write-csv writer)))
+     (log/infof "wrote predictions to %s" output-file)))
+  )
