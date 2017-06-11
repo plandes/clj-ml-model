@@ -6,9 +6,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 
 ## [Unreleased]
+
+## [0.0.13] - 2017-06-10
 ### Changed
 - Fixed model write/output bugs and added logging.
+
+### Added
 - Output matrix prediction file.
+
 
 ## [0.0.12] - 2017-05-16
 ### Changed
