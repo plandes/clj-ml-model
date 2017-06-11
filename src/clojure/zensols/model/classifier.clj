@@ -179,6 +179,7 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
   (let [res (if (instance? File name)
               name
               (model-read-resource name))
+        _ (log/infof "reading model from: %s" res)
         file-res? (instance? File res)
         exists? (and file-res? (.exists res))]
     (if (and fail-if-not-exists? file-res? (not exists?))
@@ -202,6 +203,7 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
   (let [file (if (instance? File name)
                name
                (model-write-resource name))
+        _ (log/infof "writing model to: %s" file)
         to-make-dirs (.getParentFile file)]
     (if to-make-dirs (.mkdirs to-make-dirs))
     (with-open [out (io/output-stream file)]
