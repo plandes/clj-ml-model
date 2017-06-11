@@ -1,5 +1,5 @@
 (ns ^{:doc
-"A *client* entry point library to help with executing a trained classifier.
+      "A *client* entry point library to help with executing a trained classifier.
 The classifier is tested and trained in the [[zensols.model.eval-classifier]]
 namespace.
 
@@ -284,9 +284,9 @@ docs](https://github.com/plandes/clj-ml-model)."
                (let [msg (format "Can't set value <%s> for attrib <%s>: %s"
                                  val attrib (.toString e))]
                  (log/error e msg)
-                (throw (ex-info msg {:val val
-                                     :attrib attrib}
-                                e)))))))))
+                 (throw (ex-info msg {:val val
+                                      :attrib attrib}
+                                 e)))))))))
 
 (defn- classify-features
   "Classify a single instance using a trained model.
@@ -349,11 +349,11 @@ docs](https://github.com/plandes/clj-ml-model)."
         pred-keys [:pred-label :correct-label :correct? :confidence]
         keys (concat pred-keys (map first feature-metas))
         feature-sets (if feature-sets
-                      (let [{:keys [create-features-fn]} model-conf
-                            {:keys [context]} model]
-                        (->> feature-sets
-                             (map #(create-features-fn % context))
-                             doall)))]
+                       (let [{:keys [create-features-fn]} model-conf
+                             {:keys [context]} model]
+                         (->> feature-sets
+                              (map #(create-features-fn % context))
+                              doall)))]
     (->> (or feature-sets
              (create-feature-sets-fn :set-type :test))
          (map (fn [anon]
@@ -435,5 +435,4 @@ docs](https://github.com/plandes/clj-ml-model)."
                  class-type)
             (cons (concat class-type ["predicts"]))
             (csv/write-csv writer)))
-     (log/infof "wrote predictions to %s" output-file)))
-  )
+     (log/infof "wrote predictions to %s" output-file))))
