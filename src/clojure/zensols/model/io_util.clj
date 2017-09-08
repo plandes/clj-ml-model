@@ -25,7 +25,8 @@
   [resource obj]
   (log/infof "writing to %s, object=<%s>" resource (trunc obj))
   (with-open [out (io/output-stream resource)]
-    (io/copy (nippy/freeze obj) out)))
+    (io/copy (nippy/freeze obj) out))
+  obj)
 
 (defn read-object
   "Write an object from **resource** using [clojure.java.io/input-stream].
