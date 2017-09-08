@@ -30,11 +30,11 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
   (:require [clojure.tools.logging :as log]
             [clojure.java.io :as io]
             [clojure.string :as str])
-  (:require [clj-excel.core :as excel]
-            [taoensso.nippy :as nippy])
+  (:require [clj-excel.core :as excel])
   (:require [zensols.actioncli.resource :as res]
             [zensols.util.spreadsheet :as ss])
-  (:require [zensols.model.weka :as weka]))
+  (:require [zensols.model.weka :as weka]
+            [zensols.model.io-util :as mio]))
 
 (def ^:private zero-arg-arr (into-array String []))
 
@@ -150,19 +150,6 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
   [name]
   (.exists (model-read-resource name)))
 
-;; http://stackoverflow.com/questions/23018870/how-to-read-a-whole-binary-file-nippy-into-byte-array-in-clojure
-(defn- slurpb
-  "Convert an input stream is to byte array."
-  [is & {:keys [buffer-size]
-         :or {buffer-size 1024}}]
-  (with-open [baos (java.io.ByteArrayOutputStream.)]
-    (let [ba (byte-array buffer-size)]
-      (loop [n (.read is ba 0 buffer-size)]
-        (when (> n 0)
-          (.write baos ba 0 n)
-          (recur (.read is ba 0 buffer-size))))
-      (.toByteArray baos))))
-
 (defn read-model
   "Get a saved model (classifier and attributes used).  If **name** is a
   string, use [[model-read-resource]] to calculate the file name.  Otherwise,
@@ -187,11 +174,8 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
                       {:file res})))
     (if (and file-res? (not exists?))
       (log/infof "no model resource found %s" res)
-      (do
-        (log/infof "reading model from %s" res)
-        (with-open [in (io/input-stream res)]
-          (->> (slurpb in)
-               nippy/thaw))))))
+      (do (log/infof "reading model from %s" res)
+          (mio/read-object res)))))
 
 (defn write-model
   "Get a saved model (classifier and attributes used).  If **name** is a
@@ -206,8 +190,7 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
         _ (log/infof "writing model to: %s" file)
         to-make-dirs (.getParentFile file)]
     (if to-make-dirs (.mkdirs to-make-dirs))
-    (with-open [out (io/output-stream file)]
-      (io/copy (nippy/freeze model) out))
+    (mio/write-object file file)
     (log/infof "saved model to %s" file)
     model))
 

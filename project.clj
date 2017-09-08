@@ -23,7 +23,7 @@
   :dependencies [[org.clojure/clojure "1.8.0"]
 
                  ;; command line
-                 [com.zensols.tools/actioncli "0.0.17"]
+                 [com.zensols.tools/actioncli "0.0.18"]
 
                  ;; dev
                  [com.zensols.gui/tabres "0.0.6"]
@@ -38,8 +38,7 @@
 
                  ;; ML
                  [nz.ac.waikato.cms.weka/weka-stable "3.8.1"
-                  :exclusions [
-                               com.github.fommil.netlib/core]]
+                  :exclusions [com.github.fommil.netlib/core]]
 
                  ;; weka classifiers are separate deps starting with 3.7
                  [nz.ac.waikato.cms.weka/ridor "1.0.2"]

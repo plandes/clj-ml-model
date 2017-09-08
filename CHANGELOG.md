@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 
 ## [Unreleased]
+### Changed
+- Split out serialization utility functions.
+
+
 ## [0.0.14] - 2017-08-21
 ### Changed
 - Nail down the SVMlib to a version rather than range given in POM.
