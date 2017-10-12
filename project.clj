@@ -23,7 +23,7 @@
   :dependencies [[org.clojure/clojure "1.8.0"]
 
                  ;; command line
-                 [com.zensols.tools/actioncli "0.0.18"]
+                 [com.zensols.tools/actioncli "0.0.19"]
 
                  ;; dev
                  [com.zensols.gui/tabres "0.0.6"]
