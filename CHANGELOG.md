@@ -6,9 +6,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 
 ## [Unreleased]
+
+## [0.0.15] - 2017-10-17
 ### Changed
 - Split out serialization utility functions.
-
+- Write model bug fix.
 
 ## [0.0.14] - 2017-08-21
 ### Changed
