@@ -190,7 +190,7 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
         _ (log/infof "writing model to: %s" file)
         to-make-dirs (.getParentFile file)]
     (if to-make-dirs (.mkdirs to-make-dirs))
-    (mio/write-object file file)
+    (mio/write-object file model)
     (log/infof "saved model to %s" file)
     model))
 
