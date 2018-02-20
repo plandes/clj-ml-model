@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+- Use zenbuild as submodule.
+
+### Removed
+- IO utility library moved to `clj-actioncli`, which this project already
+  includes.
+
+
 ## [0.0.15] - 2017-10-17
 ### Changed
 - Split out serialization utility functions.

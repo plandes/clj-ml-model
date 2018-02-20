@@ -34,7 +34,7 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
   (:require [zensols.actioncli.resource :as res]
             [zensols.util.spreadsheet :as ss])
   (:require [zensols.model.weka :as weka]
-            [zensols.model.io-util :as mio]))
+            [zensols.actioncli.io :as zio]))
 
 (def ^:private zero-arg-arr (into-array String []))
 
@@ -175,7 +175,7 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
     (if (and file-res? (not exists?))
       (log/infof "no model resource found %s" res)
       (do (log/infof "reading model from %s" res)
-          (mio/read-object res)))))
+          (zio/read-object res)))))
 
 (defn write-model
   "Get a saved model (classifier and attributes used).  If **name** is a
@@ -190,7 +190,7 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
         _ (log/infof "writing model to: %s" file)
         to-make-dirs (.getParentFile file)]
     (if to-make-dirs (.mkdirs to-make-dirs))
-    (mio/write-object file model)
+    (zio/write-object file model)
     (log/infof "saved model to %s" file)
     model))
 

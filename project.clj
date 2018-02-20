@@ -23,7 +23,7 @@
   :dependencies [[org.clojure/clojure "1.8.0"]
 
                  ;; command line
-                 [com.zensols.tools/actioncli "0.0.20"]
+                 [com.zensols.tools/actioncli "0.0.25"]
 
                  ;; dev
                  [com.zensols.gui/tabres "0.0.6"]
@@ -32,9 +32,6 @@
                  [outpace/clj-excel "0.0.2"]
                  [org.clojure/data.csv "0.1.2"]
                  [com.zensols.tools/misc "0.0.5"]
-
-                 ;; model serialization
-                 [com.taoensso/nippy "2.13.0"]
 
                  ;; ML
                  [nz.ac.waikato.cms.weka/weka-stable "3.8.1"

@@ -17,28 +17,31 @@ learning models.  Specifically it:
   the [dataset library](https://github.com/plandes/clj-ml-dataset).
 
 
-## Contents
+<!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
+## Table of Contents
 
-* [Obtaining](#obtaining)
-* [Documentation](#documentation)
-* [Example](#example)
-* [Usage](#usage)
-  * [Create the Corpus](#create-the-corpus)
-  * [Create Features](#create-features)
-  * [Create the Model Configuration](#create-the-model-configuration)
-  * [Create the Model](#create-the-model)
-  * [Evaluating the Model](#evaluating-the-model)
-    * [Creating an ARFF File](#creating-an-arff-file)
-    * [Cross Validation](#cross-validation)
-    * [Cross Validation Report](#cross-validation-report)
-  * [Persist/Save the Model](#persistsave-the-model)
-  * [Use the Model](#use-the-model)
-  * [Test the Model](#test-the-model)
-  * [Automating testing and overfitting](#automating-testing-and-overfitting)
-* [Building](#building)
-* [Changelog](#changelog)
-* [License](#license)
+- [Obtaining](#obtaining)
+- [Documentation](#documentation)
+- [Example](#example)
+- [Usage](#usage)
+    - [Create the Corpus](#create-the-corpus)
+    - [Create Features](#create-features)
+    - [Create the Model Configuration](#create-the-model-configuration)
+    - [Create the Model](#create-the-model)
+    - [Evaluating the Model](#evaluating-the-model)
+        - [Creating an ARFF File](#creating-an-arff-file)
+        - [One Pass Train/Test](#one-pass-traintest)
+        - [Cross Validation](#cross-validation)
+        - [Cross Validation Report](#cross-validation-report)
+    - [Persist/Save the Model](#persistsave-the-model)
+    - [Use the Model](#use-the-model)
+    - [Test the Model](#test-the-model)
+    - [Automating testing and overfitting](#automating-testing-and-overfitting)
+- [Building](#building)
+- [Changelog](#changelog)
+- [License](#license)
 
+<!-- markdown-toc end -->
 
 
 ## Obtaining
@@ -65,8 +68,8 @@ you peruse this README.
 
 To create, validate, test and utilize a model you must do the following:
 
-1. [Create the Corpus](#create-the-corpus)
-2. [Create Features](#create-features)
+1. [Create the corpus](#create-the-corpus)
+2. [Create features](#create-features)
 3. [Create the model configuration](#create-the-model-configuration)
 4. [Create the model](#create-the-model)
 5. [Evaluating the model](#evaluate-the-model)
@@ -238,12 +241,20 @@ Let's start by writing out an
 ```
 
 
+#### One Pass Train/Test
+
+By default the system uses [cross validation](#cross-validation).  To train the
+model with the training data, then test on the training set you must bind 
+[`*default-set-type*`](https://plandes.github.io/clj-ml-model/codox/zensols.model.eval-classifier.html#var-*default-set-type*)
+to `:train-test`.
+
+
 #### Cross Validation
 
-Note that we have we need to wrap everything in a `with-model-conf`, which is
-the way the framework receives our model configuration.  In practice you'll
-wrap more than just one statement and do several things in the lexical context
-of a `with-model-conf`.
+Note that we need to wrap everything in a `with-model-conf`, which is the way
+the framework receives our model configuration.  In practice you'll wrap more
+than just one statement and do several things in the lexical context of a
+`with-model-conf`.
 
 Now let's invoke a cross validation and get just an
 [F-measure](https://en.wikipedia.org/wiki/F1_score) score:
@@ -272,14 +283,19 @@ time to train.  This is all multiplied by feature metadata set cardinally,
 which drastically compoundes the run time.  In these situations you might want
 to leave it running for a while and generate a spreadsheet report as output.
 This report contains the feature set, classifiers used, and performance
-metrics.  ```clojure (with-model-conf (create-model-config) (ec/eval-and-write
-classifiers :huge-meta-set)) ```
+metrics.
+
+```clojure
+(with-model-conf (create-model-config)
+  (ec/eval-and-write classifiers :huge-meta-set))
+```
 
 
 ### Persist/Save the Model
 
 Once you're happy with the performance of your model you can save it and use it
 in the same or different JVM instance.
+
 ```clojure
 (with-model-conf (create-model-config)
   (->> (ec/create-model classifiers :set-best)
@@ -302,6 +318,7 @@ The information encoded in this file includes:
 
 First let's create a namespace to work with our new model and a function to
 create that model:
+
 ```clojure
 (ns zensols.example.sa-model
   (:require [zensols.model.execute-classifier :as exc :refer (with-model-conf)]
