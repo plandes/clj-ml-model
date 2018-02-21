@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+
+## [0.0.16] - 2018-02-21
+
 ### Changed
 - Use zenbuild as submodule.
 
