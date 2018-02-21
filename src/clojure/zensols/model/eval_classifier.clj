@@ -147,7 +147,9 @@ validation (see [[with-two-pass]])."
                 res)
               (catch Exception e
                 (if *throw-cross-validate*
-                  (throw e)
+                  (do
+                    (log/error e "couldn not cross validate")
+                    (throw e))
                   (let [msg (format "Can't cross validate classifier %s, attrib: %s: message=%s"
                                     classifier (if attribs (s/join "," attribs))
                                     (.toString e))]
