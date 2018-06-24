@@ -107,7 +107,8 @@ docs](https://github.com/plandes/clj-ml-model)."
   See [[with-model-conf]], which explains the keys."
   ([features-set]
    (create-instances features-set nil))
-  ([features-set context]
+  ([features-set context & {:keys [clone?]
+                            :or {clone? true}}]
    (log/infof "generating instances from %d feature sets" (count features-set))
    (log/tracef "feature sets: <<%s>>" (pr-str features-set))
    (let [{:keys [name]} (model-config)]
@@ -115,7 +116,8 @@ docs](https://github.com/plandes/clj-ml-model)."
       (format "%s-classify" name)
       features-set
       (model-classifier-feature-types context)
-      (model-classifier-label)))))
+      (model-classifier-label)
+      :clone? clone?))))
 
 (defn cross-fold-instances
   "Called by [[eval-classifier]] to create the data set for cross validation.
@@ -143,9 +145,9 @@ docs](https://github.com/plandes/clj-ml-model)."
                data
                (let [train-sets (create-feature-sets-fn :set-type :train)
                      test-sets (create-feature-sets-fn :set-type :test)
-                     train (create-instances train-sets)
+                     train (create-instances train-sets nil :clone? false)
                      _ (log/debugf "train instances created: %d" (.numInstances train))
-                     test (create-instances test-sets)
+                     test (create-instances test-sets nil :clone? false)
                      _ (log/debugf "test instances created: %d" (.numInstances test))]
                  {:train train
                   :test test

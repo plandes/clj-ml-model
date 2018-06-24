@@ -342,21 +342,23 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
 
 (defn train-classifier
   "Train **classifier** (`weka.classifiers.Classifier`)."
-  [classifier attributes]
-  (log/infof "training classifer %s on %s"
-             (.getName (.getClass classifier))
-             (if attributes
-               (str/join ", " attributes)
-               "none"))
-  (let [raw-data (get-data)
-        _ (log/infof "training on %d instances" (.numInstances raw-data))
-        train-data (filter-attribute-data raw-data attributes)
-        arff-file (get *operation-write-instance-fns* :train-classifier)]
-    (if arff-file
-      (binding [*arff-file* arff-file]
-        (write-arff train-data)))
-    (.buildClassifier classifier train-data)
-    classifier))
+  ([classifier attributes]
+   (train-classifier classifier attributes nil))
+  ([classifier attributes train-data]
+   (log/infof "training classifer %s on %s"
+              (.getName (.getClass classifier))
+              (if attributes
+                (str/join ", " attributes)
+                "none"))
+   (let [raw-data (or train-data (get-data))
+         _ (log/infof "training on %d instances" (.numInstances raw-data))
+         train-data (filter-attribute-data raw-data attributes)
+         arff-file (get *operation-write-instance-fns* :train-classifier)]
+     (if arff-file
+       (binding [*arff-file* arff-file]
+         (write-arff train-data)))
+     (.buildClassifier classifier train-data)
+     classifier)))
 
 (defn test-classifier
   "Test/evaluate **classifier** (`weka.classifiers.Classifier`)."
@@ -387,7 +389,7 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
            (map (fn [attribs]
                   (log/debugf "classifier: %s, attribs: %s"
                               classifier (pr-str attribs))
-                  (train-classifier classifier attribs)
+                  (train-classifier classifier attribs train-instances)
                   (-> (test-classifier classifier attribs
                                        train-instances test-instances)
                       (eval-to-results feature-metadata attribs classifier)
