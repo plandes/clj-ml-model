@@ -38,6 +38,7 @@ learning models.  Specifically it:
     - [Test the Model](#test-the-model)
     - [Automating testing and overfitting](#automating-testing-and-overfitting)
 - [Building](#building)
+- [Known Bugs](#known-bugs)
 - [Changelog](#changelog)
 - [License](#license)
 
@@ -586,6 +587,22 @@ mkdir ../clj-zenbuild && wget -O - https://api.github.com/repos/plandes/clj-zenb
 - Build the distribution binaries: `make dist`
 
 Note that you can also build a single jar file with all the dependencies with: `make uber`
+
+
+## Known Bugs
+
+I am suspicious there is a bug with the *two pass* functionality as I've
+recently worked with a data set that gave very different performance results
+using a test/train split.  While I'm not sure, I suspect the bug is somewhere
+in the Clojure -> Weka -> Clojure flow.  Currently, two pass works by
+overloading the `Instances` class and another that uses the overridden class,
+and subsequently doesn't copy that class.  This is invoked from the
+`zensols.model.weka/clone-instances` function that uses the model framework to
+create separate train and test folds.
+
+I've been over and over this code and can't find the bug.  There are any Weka
+wizards out there that have some time and can help out, I'd **really**
+appreciate it!
 
 
 ## Changelog
