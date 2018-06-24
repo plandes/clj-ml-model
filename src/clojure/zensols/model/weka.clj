@@ -74,6 +74,16 @@ and [[zensols.model.execute-classifier]]."
   exception is thrown for missing values."
   false)
 
+(def ^:dynamic *cross-fold-info*
+  "When two-pass cross fold validations are used this is bound to the following
+  map during the validation (see [[clone-instances]]):
+
+  * **:train?** `true` if creating folds during for the train phase, otherwise
+  the test phase is used
+  * **:fold** the number of the fold
+  * **:state** state shared between training and testing (i.e. context)"
+  nil)
+
 (defn make-classifiers
   "Make classifiers from either a key in [[*classifiers*]] or an instance of
   `weka.classifiers.Classifier` (meaning an already constructed instance).  All
@@ -402,7 +412,8 @@ and [[zensols.model.execute-classifier]]."
 
 (defn clone-instances
   "Return a deep clone of **inst**, optionally with a specific training and
-  test set.
+  test set.  See [[*cross-fold-info*]] to get information during the
+  validation for debugging and analysis.
 
   * **inst** an (object) instance of `weka.core.Instances` (the whole dataset)
 
@@ -426,16 +437,22 @@ and [[zensols.model.execute-classifier]]."
           (proxy-super randomize rand)))
       (trainCV [folds fold rand]
         (log/debugf "folds: %d, fold no: %d" folds fold)
-        (let [res (proxy-super trainCV folds fold rand)]
-          (if train-fn
-            (train-fn res train-state inst folds fold)
-            res)))
+        (binding [*cross-fold-info* {:train? true
+                                     :fold fold
+                                     :state train-state}]
+          (let [res (proxy-super trainCV folds fold rand)]
+            (if train-fn
+              (train-fn res train-state inst folds fold)
+              res))))
       (testCV [folds fold]
         (log/debugf "folds: %d, fold no: %d" folds fold)
-        (let [res (proxy-super testCV folds fold)]
-          (if test-fn
-            (test-fn res train-state inst folds fold)
-            res))))))
+        (binding [*cross-fold-info* {:train? false
+                                     :fold fold
+                                     :state train-state}]
+          (let [res (proxy-super testCV folds fold)]
+            (if test-fn
+              (test-fn res train-state inst folds fold)
+              res)))))))
 
 (defn instances
   "Create a new `weka.core.Instances` instance.
@@ -453,7 +470,8 @@ and [[zensols.model.execute-classifier]]."
   the class"
   ([inst-name feature-sets feature-metas]
    (instances inst-name feature-sets feature-metas nil))
-  ([inst-name feature-sets feature-metas class-feature-meta]
+  ([inst-name feature-sets feature-metas class-feature-meta & {:keys [clone?]
+                                                               :or {clone? true}}]
    (log/debugf "create %d instances" (count feature-sets))
    (let [missing-noms (find-missing-nominals feature-sets feature-metas)]
      (if (and (not *missing-values-ok*)
@@ -465,7 +483,9 @@ and [[zensols.model.execute-classifier]]."
                                   feature-metas class-feature-meta true)
                 (create-instances inst-name feature-sets
                                   feature-metas nil false))]
-     (clone-instances inst))))
+     (if clone?
+       (clone-instances inst)
+       inst))))
 
 (defn append-instances
   "Merge two instances row wise by adding dst to src."

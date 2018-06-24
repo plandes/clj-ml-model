@@ -552,6 +552,12 @@ validation (see [[with-two-pass]])."
   (let [tpconf (two-pass-config :nothrow? true)]
     (not (nil? tpconf))))
 
+(defn cross-fold-info
+  "Return information about the current fold for two-pass validations.
+  See [[weka/*cross-fold-info*]]"
+  []
+  weka/*cross-fold-info*)
+
 (defn- anon-ids-for-instance
   "Return IDs as integers found in a `core.weka.Instances`."
   [insts id-attrib]
@@ -645,7 +651,7 @@ validation (see [[with-two-pass]])."
 
   Take for example you want to count words (think Naive Bays spam filter).  If
   create features for the entire dataset before cross-validation you're
-  *cheating* because the features are based on data not seen from the test
+  \"cheating\" because the features are based on data not seen from the test
   folds.
 
   To get more accurate performance metrics you can provide functions that takes
@@ -678,16 +684,15 @@ validation (see [[with-two-pass]])."
   * **:create-two-pass-context-fn** like `:create-context-fn`, as documented
   in [[zensols.model.execute-classifier/with-model-conf]] but called for two
   pass cross validation; this allows a more general context and a specific two
-  pass context to be created for the unique needs of the model
+  pass context to be created for the unique needs of the model.
 
   ## Example
 
   ```
   (with-two-pass (create-model-config)
-    (if true
-      {:id-key sf/id-key
-       :anon-by-id-fn #(->> % adb/anon-by-id :instance)
-       :anons-fn adb/anons})
+    {:id-key sf/id-key
+     :anon-by-id-fn #(->> % adb/anon-by-id :instance)
+     :anons-fn adb/anons}
   (with-feature-context (sf/create-context :anons-fn adb/anons
                                            :set-type :train-test)
     (ec/terse-results [:j48] :set-test-two-pass :only-stats? true)))
