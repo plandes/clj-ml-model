@@ -8,6 +8,19 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## [Unreleased]
 
 
+## [0.0.17] - 2018-06-24
+
+### Added
+- Contributions file.
+
+### Changed
+- Moved to MIT license.
+- Fixed test/train type evaluation classifier bad results.  Note that you'll
+  want to rerun your evaluations and retrain your models if you used the
+  `train-test` method of evaluation.  For single pass cross validation (default
+  validation type) you're fine.
+
+
 ## [0.0.16] - 2018-02-21
 
 ### Changed
@@ -79,7 +92,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - API documentation creation version bump.
 
 
-[Unreleased]: https://github.com/plandes/clj-ml-model/compare/v0.0.14...HEAD
+[Unreleased]: https://github.com/plandes/clj-ml-model/compare/v0.0.17...HEAD
+[0.0.17]: https://github.com/plandes/clj-ml-model/compare/v0.0.16...v0.0.17
+[0.0.16]: https://github.com/plandes/clj-ml-model/compare/v0.0.15...v0.0.16
+[0.0.15]: https://github.com/plandes/clj-ml-model/compare/v0.0.14...v0.0.15
 [0.0.14]: https://github.com/plandes/clj-ml-model/compare/v0.0.13...v0.0.14
 [0.0.13]: https://github.com/plandes/clj-ml-model/compare/v0.0.12...v0.0.13
 [0.0.12]: https://github.com/plandes/clj-ml-model/compare/v0.0.11...v0.0.12
