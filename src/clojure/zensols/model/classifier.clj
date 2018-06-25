@@ -385,15 +385,16 @@ at [[zensols.model.eval-classifier]] and [[zensols.model.execute-classifier]]."
       (->> feature-meta-sets
            (map #(map name %))
            (map (fn [attribs]
-                  (log/debugf "classifier: %s, attribs: %s"
-                              classifier (pr-str attribs))
-                  (train-classifier classifier attribs)
-                  (-> (test-classifier classifier attribs
-                                       train-instances test-instances)
-                      (eval-to-results feature-metadata attribs classifier)
-                      (assoc :instances-trained trained-count
-                             :instances-tested tested-count
-                             :instances-total (+ trained-count tested-count)))))
+                  (let [classifier (weka/clone-classifier classifier)]
+                    (log/debugf "classifier: %s, attribs: %s"
+                                classifier (pr-str attribs))
+                    (train-classifier classifier attribs)
+                    (-> (test-classifier classifier attribs
+                                         train-instances test-instances)
+                        (eval-to-results feature-metadata attribs classifier)
+                        (assoc :instances-trained trained-count
+                               :instances-tested tested-count
+                               :instances-total (+ trained-count tested-count))))))
            doall))))
 
 (defn classify-instance

@@ -9,7 +9,7 @@ and [[zensols.model.execute-classifier]]."
             [clojure.set :refer (intersection difference)])
   (:import (weka.core Attribute Instance DenseInstance Instances FastVector))
   (:import (weka.core.converters ArffLoader ConverterUtils$DataSink))
-  (:import (weka.classifiers Classifier Evaluation))
+  (:import (weka.classifiers Classifier AbstractClassifier Evaluation))
   (:import (weka.filters Filter))
   (:import (weka.filters.unsupervised.attribute Remove StringToWordVector)))
 
@@ -561,6 +561,9 @@ and [[zensols.model.execute-classifier]]."
               insts feature-sets)
          doall)
     insts))
+
+(defn clone-classifier [classifier]
+  (AbstractClassifier/makeCopy classifier))
 
 (defmacro let-classifier
   "fnspec ==> (classifier-name [insts] exprs)

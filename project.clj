@@ -1,8 +1,8 @@
 (defproject com.zensols.ml/model "0.1.0-SNAPSHOT"
   :description "Interface for machine learning modeling, testing and training."
   :url "https://github.com/plandes/clj-ml-model"
-  :license {:name "Apache License version 2.0"
-            :url "https://www.apache.org/licenses/LICENSE-2.0"
+  :license {:name "MIT"
+            :url "https://opensource.org/licenses/MIT"
             :distribution :repo}
   :plugins [[lein-codox "0.10.3"]
             [lein-javadoc "0.3.0"]
@@ -23,7 +23,7 @@
   :dependencies [[org.clojure/clojure "1.8.0"]
 
                  ;; command line
-                 [com.zensols.tools/actioncli "0.0.25"]
+                 [com.zensols.tools/actioncli "0.0.27"]
 
                  ;; dev
                  [com.zensols.gui/tabres "0.0.6"]
@@ -49,7 +49,8 @@
                  [nz.ac.waikato.cms.weka/LibSVM "1.0.10"
                   :exclusions [tw.edu.ntu.csie/libsvm]]
                  [tw.edu.ntu.csie/libsvm "3.17"]]
-  :profiles {:appassem {:aot :all}
+  :profiles {:1.9 {:dependencies [[org.clojure/clojure "1.9.0"]]}
+             :appassem {:aot :all}
              :snapshot {:git-version {:version-cmd "echo -snapshot"}}
              :dev
              {:jvm-opts
