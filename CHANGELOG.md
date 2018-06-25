@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Added
 - Contributions file.
+- Clojure 1.9 profile.
 
 ### Changed
 - Moved to MIT license.

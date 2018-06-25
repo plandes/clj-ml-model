@@ -49,7 +49,8 @@
                  [nz.ac.waikato.cms.weka/LibSVM "1.0.10"
                   :exclusions [tw.edu.ntu.csie/libsvm]]
                  [tw.edu.ntu.csie/libsvm "3.17"]]
-  :profiles {:appassem {:aot :all}
+  :profiles {:1.9 {:dependencies [[org.clojure/clojure "1.9.0"]]}
+             :appassem {:aot :all}
              :snapshot {:git-version {:version-cmd "echo -snapshot"}}
              :dev
              {:jvm-opts
